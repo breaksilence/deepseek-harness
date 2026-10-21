@@ -1,0 +1,49 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/image-description/tool-image-description/README.md
+/:
+  en: c3adf55fc989d04f
+  zh: 0156f29c66b414cd
+/deepseek-ai-dsh-tool-image-description:
+  en: f301e63335d0dcec
+  zh: ce2a67d9fc4783f3
+/deepseek-ai-dsh-tool-image-description/summary:
+  en: a292823f8d70ae31
+  zh: 99d01e00f1e45498
+/deepseek-ai-dsh-tool-image-description/table-of-contents:
+  en: b563e4ec4727d0de
+  zh: d0228da978238e05
+/deepseek-ai-dsh-tool-image-description/use-this-package:
+  en: 9b9ce6ec86b5eaa5
+  zh: 68216bbe56d6e689
+/deepseek-ai-dsh-tool-image-description/understand-the-implementation:
+  en: ae48fe253f32a692
+  zh: a44abe302d0b7db3
+/deepseek-ai-dsh-tool-image-description/understand-the-implementation/source-map:
+  en: 31fb5894830d1035
+  zh: 941991aafda4c6e3
+/deepseek-ai-dsh-tool-image-description/further-exploration:
+  en: fd0b776fcf1f0db8
+  zh: 2465fdb9d65dfe94
+/deepseek-ai-dsh-tool-image-description/model-experience:
+  en: 21242b49b90ee96c
+  zh: a3817c5f0c93501e
+/deepseek-ai-dsh-tool-image-description/model-experience/describe-image:
+  en: 08e7bc35943d6ccd
+  zh: 08e7bc35943d6ccd
+/deepseek-ai-dsh-tool-image-description/model-experience/describe-image/what-the-model-sees:
+  en: 3e055a1a4614bfc8
+  zh: 481d7a2b020151f1
+/deepseek-ai-dsh-tool-image-description/model-experience/describe-image/token-effect:
+  en: 26774f608e666ea9
+  zh: b64b4771f09ff778
+/deepseek-ai-dsh-tool-image-description/model-experience/describe-image/kv-cache-effect:
+  en: fbe118dc366b52c4
+  zh: 20f0d76b8fb376ef
+/deepseek-ai-dsh-tool-image-description/known-limitations-and-deferred-work:
+  en: e7a9b3ca82ed5900
+  zh: 73477e503de5a5f9
+/deepseek-ai-dsh-tool-image-description/known-limitations-and-deferred-work/dev-note:
+  en: f43683ce0e4066ef
+  zh: 2ca0574a54df7cf1

@@ -1,0 +1,49 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/image-description/image-description/README.md
+/:
+  en: 30271b41ca1c09ca
+  zh: f211bf30072bb87d
+/deepseek-ai-dsh-image-description:
+  en: 55ba96393c5e1915
+  zh: 3d02919703b18e33
+/deepseek-ai-dsh-image-description/summary:
+  en: 1b7941f9b0298488
+  zh: 3d1c4ef32f868d87
+/deepseek-ai-dsh-image-description/table-of-contents:
+  en: b563e4ec4727d0de
+  zh: d0228da978238e05
+/deepseek-ai-dsh-image-description/use-this-package:
+  en: dca645c6093f1769
+  zh: a983c2b6dd174251
+/deepseek-ai-dsh-image-description/understand-the-implementation:
+  en: 50e0c654c0d07a12
+  zh: 388b64d1a9fd4fd8
+/deepseek-ai-dsh-image-description/understand-the-implementation/source-map:
+  en: 9a2e751fbe58d7e7
+  zh: 0b9a1458f3a2a04b
+/deepseek-ai-dsh-image-description/further-exploration:
+  en: 1f0e2f21dd0c633b
+  zh: d89df59a9f2968ca
+/deepseek-ai-dsh-image-description/model-experience:
+  en: 71e6b15536e1cee1
+  zh: 136c391b480cac90
+/deepseek-ai-dsh-image-description/model-experience/auxiliary-vision-request:
+  en: 8d91b50466efa8d2
+  zh: 727b9606e381ab0d
+/deepseek-ai-dsh-image-description/model-experience/auxiliary-vision-request/what-the-model-sees:
+  en: 4df39c4bec70e90a
+  zh: caf4d3678c94beda
+/deepseek-ai-dsh-image-description/model-experience/auxiliary-vision-request/token-effect:
+  en: b39c92e2665b8429
+  zh: 5406bb1bcf7808f5
+/deepseek-ai-dsh-image-description/model-experience/auxiliary-vision-request/kv-cache-effect:
+  en: 7fd2f7e35ccaebf3
+  zh: d25a7f1f0aa82bc9
+/deepseek-ai-dsh-image-description/known-limitations-and-deferred-work:
+  en: d7de45417443d706
+  zh: 975678b56af2a181
+/deepseek-ai-dsh-image-description/known-limitations-and-deferred-work/dev-note:
+  en: f43683ce0e4066ef
+  zh: 2ca0574a54df7cf1
