@@ -119,6 +119,14 @@ pnpm run build
 
 `pnpm run hygiene` includes `publint`, which validates package entrypoints against the built `lib/*.js` files, and `verify-node-next-types`, which validates built declarations against a temporary NodeNext consumer. A fresh worktree has no bundled JS or declarations until `pnpm run build` runs; ordinary commits and pushes do not require that build unless their selected checks consume it.
 
+### Scratch files and generated output
+
+The repository's single scratch root is `tmp/`, which `.gitignore` excludes. Temporary files, logs, captured output, and one-off experiment scripts go in a task-named `tmp/<task>/` directory — never in the repository root, `apps/`, or `packages/` — and that directory is deleted when the work ends; the [Cordis tutorial](cordis-tutorial/index.md) works in the same place. Cleanup removes only the task directory its owner created: `tmp/` is shared by concurrent sessions, so deleting it, or a subdirectory someone else owns, destroys unrelated work.
+
+New code joins the existing `packages/<group>/<pkg>/` workspace layout, and unsettled work starts in `tmp/` or a `packages/experimental/` leaf rather than changing a shipped package. Root-level directories are an inventory: `pnpm run verify-repository-layout`, part of `pnpm run hygiene` and the CI static lane, rejects a top-level directory that is neither declared nor Git-ignored, an untracked file at the repository root, a scratch root that Git does not ignore, and a tracked file that an ignore rule covers. Recorded workspace fixtures under `snapshots/` reproduce ignored paths on purpose and are the only exemption.
+
+`pnpm run clean` removes build output and residue left by deleted packages. Generated output never enters Git: `lib/`, `dist/`, and the other ignored artifact trees stay uncommitted, and the same gate reports a tracked one.
+
 ### Environment variables
 
 The real DeepSeek adapter and key-backed agent demos read credentials from the environment or from a gitignored `.env` at the repo root:

@@ -498,8 +498,8 @@ const TOOL_PACKAGES: ToolPackage[] = [
       await ctx.plugin(AgentRegistry)
       await ctx.plugin(SkillRegistry)
       await ctx.plugin(SkillFileSystem, {
-        dshHome: resolve(root, '.tmp/tool-catalog/.dsh'),
-        agentsHome: resolve(root, '.tmp/tool-catalog/.agents'),
+        dshHome: resolve(root, 'tmp/tool-catalog/.dsh'),
+        agentsHome: resolve(root, 'tmp/tool-catalog/.agents'),
       })
       await ctx.plugin(ToolSkill)
     },
@@ -668,7 +668,7 @@ const TOOL_PACKAGES: ToolPackage[] = [
     writes: ['tool/call', 'tool/result'],
     async mount(ctx) {
       // Schema harvest never prepares a payload; the directory need not exist.
-      await ctx.plugin(ToolWorkspaceDependencies, { source: resolve(root, '.tmp/tool-catalog/primary-runtime') })
+      await ctx.plugin(ToolWorkspaceDependencies, { source: resolve(root, 'tmp/tool-catalog/primary-runtime') })
     },
   },
   {

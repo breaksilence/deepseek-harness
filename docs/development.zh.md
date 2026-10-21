@@ -124,6 +124,14 @@ pnpm run build
 `pnpm run hygiene` 包含 `publint`（用构建出的 `lib/*.js` 文件校验包入口点）和 `verify-node-next-types`（用一个临时的 NodeNext 消费方校验构建出的声明文件）。新 worktree 在 `pnpm run build` 运行之前没有打包的 JS 和声明文件；普通提交和推送无需构建，除非所选检查会使用这些产物。
 
 
+### 临时文件与生成产物
+
+仓库唯一的临时根目录是 `tmp/`，由 `.gitignore` 排除。临时文件、日志、抓取的输出和一次性实验脚本放在按任务命名的 `tmp/<task>/` 目录中——不要放在仓库根目录、`apps/` 或 `packages/` 下——任务结束时删除该目录；[Cordis 教程](cordis-tutorial/index.zh.md)就在同一目录中操作。清理只删除自己创建的任务目录：`tmp/` 由多个并发会话共享，删除整个 `tmp/` 或他人拥有的子目录会毁掉无关工作。
+
+新代码沿用既有的 `packages/<group>/<pkg>/` 工作区布局，尚未定型的改动从 `tmp/` 或 `packages/experimental/` 下的包开始，而不是直接改动已发布的包。顶层目录是一份清单：`pnpm run verify-repository-layout`（属于 `pnpm run hygiene` 和 CI 静态检查通道）会拒绝既未声明也未被 Git 忽略的顶层目录、仓库根目录下未跟踪的文件、未被 Git 忽略的临时根目录，以及被忽略规则覆盖的已跟踪文件。`snapshots/` 下录制的 workspace fixture 会刻意复现被忽略的路径，是唯一的例外。
+
+`pnpm run clean` 删除构建产物以及已删除包留下的残留。生成产物不进入版本控制：`lib/`、`dist/` 和其他被忽略的产物目录保持未提交状态，同一门检查会报告被跟踪的产物。
+
 ### 环境变量
 
 真实的 DeepSeek 适配器和需要密钥的 agent 演示从环境变量或仓库根目录一个被 gitignore 的 `.env` 文件读取凭证：

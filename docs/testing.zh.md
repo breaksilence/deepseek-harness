@@ -20,6 +20,10 @@ Session fixture 保留 header 与 payload，但省略正文 seq/time envelope；
 
 fork 出的 worker 会同时运行多个 spec 文件，coverage gate 会拆成[并发的 partition](../scripts/coverage-partitions.ts)，与同一个 job 中的其它 gate 并排运行，而自托管 runner 共用同一台宿主机和同一个卷。被隔离的只有进程：端口、可预测路径、外部命名空间和继承而来的子进程都不隔离。为每个占用的资源负责到 teardown。只在单独运行时通过的 spec 存在测试缺陷，而非 runner 不稳定。[dsh-ci-test-reliability](../.agents/skills/dsh-ci-test-reliability/SKILL.md) 负责资源分配、状态恢复、同步、超时预算、平台差异与 teardown 规则；它的 [flake 诊断流程](../.agents/skills/dsh-ci-test-reliability/references/ci-flake-diagnosis.md)用于归类已经存在的概率性失败。 [fork 意外退出](../scripts/coverage-fork-diagnostics.ts)时会报告 PID、文件、退出码和信号。
 
+## 测试数量与整合
+
+一条用例的价值，在于它能捕获其他用例捕不到的缺陷。优先扩展已经拥有该被测主体的 spec 文件——增加一行表驱动用例、在拥有它的 `describe` 里增加一个 case、或在既有用例里增加断言——只有没有任何 spec 文件拥有该行为时才新建 `*.spec.ts`。一个风险只保留一条场景：换一套设置达到同样的行为，或在单元测试、真实入口测试与快照层级重复同一条断言，只增加运行时间与维护成本，不增加覆盖。被取代的用例在同一改动里删除，不要在新形态旁边留下旧形态。新增 spec 文件、或为同一行为新增多条用例的改动，要在 PR 中说明哪条行为原本无人覆盖。覆盖率门禁、真实入口测试与快照要求仍然适用：本节约束的是测试的形态与数量，而不是要不要测试。
+
 ## 带密钥策略：推理（inference）在这里很便宜
 
 我们是 DeepSeek，不要吝惜真实 API 测试。无密钥测试只能证明底层通路；只有带密钥运行才能证明 agent（智能体）能对接真实模型正常工作。覆盖文件写入提示词、包含多个轮次的对话、工具使用和流中取消。价值最高的是**冒烟测试**：启动已交付的 `dsh` profile、发送一条提示词，并检查外部世界；它们能捕获「单元测试全绿、产品却坏了」这一类 mock 无法发现的问题（[事故复盘 0001](postmortem/0001-acp-default-export-drops-inject.zh.md)）。自动跳过让无密钥 CI 和无密钥贡献者不受阻塞；它不是成本信号。Profile 级集成测试位于 `apps/cli/tests/profiles/`；包专属组合留在对应包的测试目录中。
