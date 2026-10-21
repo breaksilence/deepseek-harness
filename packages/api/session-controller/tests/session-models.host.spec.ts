@@ -825,12 +825,13 @@ describe('Web session model selection', () => {
     expectValue(await remote.selectModel(request({
       sessionId, provider: 'text-only', model: 'plain',
     })))
-    expect(await remote.prompt(promptRequest({
+    // Admission is model-agnostic: a text-only route accepts the image, and the
+    // llm layer projects it into a deterministic per-image placeholder at
+    // request time (`projectImagesForTextModel`).
+    expectValue(await remote.prompt(promptRequest({
       sessionId, mode: 'queue', content: [image],
-    }))).toMatchObject({
-      ok: false,
-      error: { code: 'session/attachment-invalid', details: { reason: 'MODEL_DOES_NOT_SUPPORT_IMAGES' } },
-    })
+    })))
+    expect(followup).toHaveBeenCalledTimes(1)
 
     expectValue(await remote.selectModel(request({
       sessionId, provider: 'image-capable', model: 'vision',
@@ -852,7 +853,8 @@ describe('Web session model selection', () => {
     }))).toMatchObject({ ok: false, error: { code: 'gateway/internal', message: 'fixture rejected' } })
     saveMode = 'success'
     expectValue(await remote.prompt(promptRequest({ sessionId, mode: 'queue', content: [image] })))
-    expect(followup).toHaveBeenCalledOnce()
+    // Two admitted image prompts: the text-only route above and this one.
+    expect(followup).toHaveBeenCalledTimes(2)
 
     ;(agent.inbox.nextTurn as UserMessage[]).push({
       id: 'pending-image', role: 'user', source: { kind: 'user' },
