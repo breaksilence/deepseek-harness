@@ -58,23 +58,15 @@ The plugin is a service: it registers `ctx.imageDescription` and resolves the fa
 <a id="model-experience"></a>
 ## Model Experience
 
-The seam adds no model-facing text of its own; the description reaches the conversation only through a consumer's tool result.
-
-### Auxiliary vision request
-
-#### What the model sees
-
-One user message carrying the image block and the instruction, delivered only to the vision route. The conversation's own route never sees it.
-
-#### Token effect
-
-One auxiliary request per described image, bounded by `maxOutputTokens`; nothing is appended to the session surface.
+None, as this seam returns description text to its consumer and never contributes model context itself.
 
 #### KV Cache effect
 
 The auxiliary request carries no conversation prefix, so it neither reads nor invalidates the cache.
-<a id="known-limitations-and-deferred-work"></a>
+
 ## Known Limitations and Deferred Work
+
+<a id="known-limitations-and-deferred-work"></a>
 
 - The fallback route is a deployment `Config`, not a settings namespace; a settings owner applies it by calling `configureVisionModel`.
 - Every description is a fresh model call: no caching, so the same image described twice costs twice.

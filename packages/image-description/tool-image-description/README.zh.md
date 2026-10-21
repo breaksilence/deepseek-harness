@@ -55,21 +55,12 @@ kind: "package-reference"
 <a id="model-experience"></a>
 ## 模型体验
 
-模型看到工具名、描述、两个参数，以及一条呈现文本结果。
-
-### describe_image
-
-#### 模型看到什么
-
-工具名；要求它传入图片占位符里的附件句柄的描述；`attachment` 与 `prompt` 两个参数；以及标注了产生路由的文本结果。
-
-#### token 影响
-
-挂载该工具的每次请求常驻一份工具 schema，另加每次调用一份结果文本。
+无，因为工具只呈现一条文本结果，其 schema 与描述已由工具定义本身持有。
 
 #### KV 缓存影响
 
 不新增系统提示段落，也不改历史前缀。
+
 <a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与延后工作
 

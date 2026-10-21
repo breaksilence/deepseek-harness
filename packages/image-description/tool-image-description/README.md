@@ -55,23 +55,15 @@ The plugin registers one tool in the mounting scope. On a call it resolves the a
 <a id="model-experience"></a>
 ## Model Experience
 
-The model sees the tool name, its description, two parameters, and one presented text result.
-
-### describe_image
-
-#### What the model sees
-
-The tool name, a description that tells it to pass the attachment handle from an image placeholder, the `attachment` and `prompt` parameters, and a text result naming the route that produced the description.
-
-#### Token effect
-
-One tool schema resident in every request that mounts the tool, plus one result text per call.
+None, as the tool presents one text result and the tool definition already owns its schema and description.
 
 #### KV Cache effect
 
 The tool adds no system-prompt section and no history prefix.
-<a id="known-limitations-and-deferred-work"></a>
+
 ## Known Limitations and Deferred Work
+
+<a id="known-limitations-and-deferred-work"></a>
 
 - Only the attachment store is a source; a bare local path is not accepted. `read_image` remains the tool for images already reachable on the filesystem.
 - Each call is one auxiliary vision request; the tool does not cache descriptions.

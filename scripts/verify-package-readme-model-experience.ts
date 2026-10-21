@@ -45,6 +45,15 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
  * blocks. A package moves on or off this list with its context behavior.
  */
 const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
+  // The seam adds no model-facing text of its own: it returns a description to
+  // its consumer, which owns presentation, so its entry lives here rather than
+  // as a model-context block.
+  'packages/image-description/image-description': { kind: 'none', reason: 'Returns description text to a consumer; the vision request is auxiliary and never enters the session surface.' },
+  // The tool presents one text result; its schema is generated from the tool
+  // definition, so the structured model-context block adds no audited detail
+  // beyond what the definition already pins.
+  'packages/image-description/tool-image-description': { kind: 'none', reason: 'Presents the seam text with the responsible route; the tool definition owns the schema and description.' },
+
   'packages/experimental/client-ui-cot-translation': { kind: 'indirect', reason: 'The translator owns optional paid queries; normal Session activation delegates startup context to the preset.' },
   'packages/experimental/cot-translation-bundle': { kind: 'indirect', reason: 'The GUI consumer delegates paid query prompts to the translator and normal activation context to the Session preset.' },
   'packages/client/product-analytics': { kind: 'none', reason: 'Desktop analytics observes selected interactions without contributing model context or Session events.' },

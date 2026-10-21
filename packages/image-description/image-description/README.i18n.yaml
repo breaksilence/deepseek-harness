@@ -27,22 +27,13 @@
   en: 1f0e2f21dd0c633b
   zh: d89df59a9f2968ca
 /deepseek-ai-dsh-image-description/model-experience:
-  en: 71e6b15536e1cee1
-  zh: 136c391b480cac90
-/deepseek-ai-dsh-image-description/model-experience/auxiliary-vision-request:
-  en: 8d91b50466efa8d2
-  zh: 727b9606e381ab0d
-/deepseek-ai-dsh-image-description/model-experience/auxiliary-vision-request/what-the-model-sees:
-  en: 4df39c4bec70e90a
-  zh: caf4d3678c94beda
-/deepseek-ai-dsh-image-description/model-experience/auxiliary-vision-request/token-effect:
-  en: b39c92e2665b8429
-  zh: 5406bb1bcf7808f5
-/deepseek-ai-dsh-image-description/model-experience/auxiliary-vision-request/kv-cache-effect:
-  en: 7fd2f7e35ccaebf3
+  en: 52e37538b5ef362d
+  zh: 8aad39bdeb4a43cb
+/deepseek-ai-dsh-image-description/model-experience/kv-cache-effect:
+  en: 0a5e7fe2121b26a7
   zh: d25a7f1f0aa82bc9
 /deepseek-ai-dsh-image-description/known-limitations-and-deferred-work:
-  en: d7de45417443d706
+  en: ef6adc394f0afeef
   zh: 975678b56af2a181
 /deepseek-ai-dsh-image-description/known-limitations-and-deferred-work/dev-note:
   en: f43683ce0e4066ef

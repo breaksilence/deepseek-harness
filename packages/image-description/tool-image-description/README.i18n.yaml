@@ -27,22 +27,13 @@
   en: fd0b776fcf1f0db8
   zh: 2465fdb9d65dfe94
 /deepseek-ai-dsh-tool-image-description/model-experience:
-  en: 21242b49b90ee96c
-  zh: a3817c5f0c93501e
-/deepseek-ai-dsh-tool-image-description/model-experience/describe-image:
-  en: 08e7bc35943d6ccd
-  zh: 08e7bc35943d6ccd
-/deepseek-ai-dsh-tool-image-description/model-experience/describe-image/what-the-model-sees:
-  en: 3e055a1a4614bfc8
-  zh: 481d7a2b020151f1
-/deepseek-ai-dsh-tool-image-description/model-experience/describe-image/token-effect:
-  en: 26774f608e666ea9
-  zh: b64b4771f09ff778
-/deepseek-ai-dsh-tool-image-description/model-experience/describe-image/kv-cache-effect:
-  en: fbe118dc366b52c4
+  en: 259c48769a26d0f0
+  zh: 4752b420d1be0cd6
+/deepseek-ai-dsh-tool-image-description/model-experience/kv-cache-effect:
+  en: 86afbcaf6b87a4e6
   zh: 20f0d76b8fb376ef
 /deepseek-ai-dsh-tool-image-description/known-limitations-and-deferred-work:
-  en: e7a9b3ca82ed5900
+  en: 3cc73f74a26478b7
   zh: 73477e503de5a5f9
 /deepseek-ai-dsh-tool-image-description/known-limitations-and-deferred-work/dev-note:
   en: f43683ce0e4066ef
