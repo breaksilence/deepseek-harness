@@ -13,6 +13,7 @@ import {
   prepareImageFile,
   publishImmutableObject,
   readImageFile,
+  resolveImageByContentAddress,
   saveImageFile,
 } from '../src/store.ts'
 
@@ -295,5 +296,61 @@ describe('local attachment store', () => {
       ...prepared,
       data: Uint8Array.of(...prepared.data, 0),
     })).rejects.toMatchObject({ code: 'ATTACHMENT_CORRUPT' })
+  })
+})
+
+describe('content-addressed image lookup', () => {
+  it('resolves by the full digest and by a unique prefix', async () => {
+    const storageRoot = await root()
+    const ref = await saveImageFile(storageRoot, { data: PNG, mediaType: 'image/png' }, LIMITS, POLICY)
+    const digest = String(ref.attachmentId).slice('sha256:'.length)
+
+    const full = await resolveImageByContentAddress(storageRoot, String(ref.attachmentId))
+    expect(full?.ref).toEqual(ref)
+    expect(full?.data).toEqual(PNG)
+
+    const prefixed = await resolveImageByContentAddress(storageRoot, digest.slice(0, 8))
+    expect(prefixed?.ref).toEqual(ref)
+  })
+
+  it('returns undefined when no object matches the prefix', async () => {
+    const storageRoot = await root()
+    await saveImageFile(storageRoot, { data: PNG, mediaType: 'image/png' }, LIMITS, POLICY)
+
+    await expect(resolveImageByContentAddress(storageRoot, 'deadbeefdeadbeef'))
+      .resolves.toBeUndefined()
+  })
+
+  it('rejects a malformed reference instead of scanning for it', async () => {
+    const storageRoot = await root()
+
+    for (const malformed of ['sha256:xyz', 'abc', 'zzzzzzzzzz']) {
+      await expect(resolveImageByContentAddress(storageRoot, malformed))
+        .rejects.toMatchObject({ code: 'INVALID_ATTACHMENT_REF' })
+    }
+  })
+
+  it('names the ambiguity when one prefix matches more than one object', async () => {
+    const storageRoot = await root()
+    const ref = await saveImageFile(storageRoot, { data: PNG, mediaType: 'image/png' }, LIMITS, POLICY)
+    const digest = String(ref.attachmentId).slice('sha256:'.length)
+    const prefix = digest.slice(0, 8)
+    const sibling = `${prefix}${digest.slice(8) === '0'.repeat(56) ? '1'.repeat(56) : '0'.repeat(56)}`
+    await writeFile(join(storageRoot, 'objects', prefix.slice(0, 2), sibling), new Uint8Array())
+
+    await expect(resolveImageByContentAddress(storageRoot, prefix))
+      .rejects.toMatchObject({ code: 'AMBIGUOUS_ATTACHMENT_REFERENCE' })
+  })
+
+  it.skipIf(process.platform === 'win32')('verifies the object it resolved', async () => {
+    const storageRoot = await root()
+    const ref = await saveImageFile(storageRoot, { data: PNG, mediaType: 'image/png' }, LIMITS, POLICY)
+    const digest = String(ref.attachmentId).slice('sha256:'.length)
+    const target = join(storageRoot, 'objects', digest.slice(0, 2), digest)
+    await chmod(target, 0o644)
+    await writeFile(target, Uint8Array.of(1, 2, 3))
+
+    await expect(resolveImageByContentAddress(storageRoot, digest))
+      .rejects.toMatchObject({ code: 'ATTACHMENT_CORRUPT' })
   })
 })

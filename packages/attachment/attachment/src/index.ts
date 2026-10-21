@@ -178,6 +178,25 @@ export abstract class AttachmentStore extends Service {
   }
 
   /**
+   * Resolve one stored image from its content address alone, so a consumer that
+   * holds only the sha256 handle a text-only model saw can address the exact
+   * object. Backends without content-addressed lookup keep this default
+   * rejection.
+   * @param reference - full sha256 digest, or a unique hex prefix of one.
+   * @param signal - optional cancellation for lookup and read work.
+   * @returns the verified reference and bytes, or undefined when nothing matches.
+   * @throws an AttachmentError when the reference is malformed or ambiguous, or the backend cannot look it up.
+   */
+  resolveImageByContentAddress(reference: string, signal?: AbortSignal): Promise<StoredImageAttachment | undefined> {
+    void reference
+    void signal
+    return Promise.reject(new AttachmentError(
+      'The mounted attachment provider cannot resolve images by content address.',
+      'ATTACHMENT_LOOKUP_UNSUPPORTED',
+    ))
+  }
+
+  /**
    * Durably commit one file byte-for-byte before its owning session event is
    * appended. Files carry no admission limits: any byte content and length is
    * accepted, and the stored object is the exact submitted bytes. Backends

@@ -18,7 +18,11 @@ import type {
 import { dshCachePath, resolveDshHome } from '@deepseek-ai/dsh-home-paths'
 import type { NormalizationPolicy } from './normalization.ts'
 import { CompressionLimiter, compressionFailure } from './compression-limiter.ts'
-import { commitPreparedImageFile, normalizedImagePath, prepareImageFile, readImageFile, validateImageFile } from './store.ts'
+import {
+  commitPreparedImageFile, normalizedImagePath, prepareImageFile, readImageFile,
+  resolveImageByContentAddress as resolveImageByContentAddressInStore,
+  validateImageFile,
+} from './store.ts'
 import {
   readFileStreamVerbatim, saveFileStreamVerbatim, saveFileVerbatim, storedFilePath,
 } from './file-store.ts'
@@ -223,6 +227,20 @@ export class LocalAttachmentStore extends AttachmentStore {
 
   async readImage(ref: ImageAttachmentRef, signal?: AbortSignal): Promise<StoredImageAttachment> {
     return readImageFile(this.root, ref, signal)
+  }
+
+  /**
+   * Resolve one stored image from a full digest or a unique hex prefix.
+   * @param reference - `sha256:`-prefixed or bare digest/prefix from a model-visible handle.
+   * @param signal - optional cancellation for lookup and read work.
+   * @returns the verified reference and bytes, or undefined when no object matches.
+   * @throws an AttachmentError when the reference is malformed, ambiguous, or corrupt.
+   */
+  override async resolveImageByContentAddress(
+    reference: string,
+    signal?: AbortSignal,
+  ): Promise<StoredImageAttachment | undefined> {
+    return resolveImageByContentAddressInStore(this.root, reference, signal)
   }
 
   override imageHostPath(ref: ImageAttachmentRef): string {

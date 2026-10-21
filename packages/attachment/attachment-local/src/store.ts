@@ -2,7 +2,7 @@
 
 import { createHash, randomUUID } from 'node:crypto'
 import { constants, createReadStream } from 'node:fs'
-import { chmod, link, mkdir, open, readFile, unlink } from 'node:fs/promises'
+import { chmod, link, mkdir, open, readdir, readFile, unlink } from 'node:fs/promises'
 import { dirname, join, parse, resolve } from 'node:path'
 import {
   AttachmentError,
@@ -455,4 +455,71 @@ export async function readImageFile(
     throw new AttachmentError('Stored attachment metadata does not match its reference.', 'ATTACHMENT_CORRUPT')
   }
   return { ref, data }
+}
+
+/** Accepted content-address forms: a bare lowercase hex digest or a hex prefix of at least 8 digits. */
+const CONTENT_ADDRESS_PATTERN = /^[a-f0-9]{8,64}$/
+
+/**
+ * Resolve one stored image from its content address alone.
+ *
+ * A text-only route receives `attachment sha256:<first 8 hex>` for an image it
+ * cannot accept, so the handle a model can quote is a prefix rather than the
+ * full digest. This lookup turns that quote back into the verified object
+ * without a temporary file.
+ * @param root - absolute `DSH_HOME/attachments/v1` root.
+ * @param reference - full digest or unique prefix, with or without the `sha256:` scheme.
+ * @param signal - optional cancellation for directory listing and read work.
+ * @returns the verified reference and bytes, or undefined when no object matches.
+ * @throws AttachmentError when the reference is malformed, ambiguous, or fails verification.
+ */
+export async function resolveImageByContentAddress(
+  root: string,
+  reference: string,
+  signal?: AbortSignal,
+): Promise<StoredImageAttachment | undefined> {
+  signal?.throwIfAborted()
+  const bare = reference.startsWith('sha256:') ? reference.slice('sha256:'.length) : reference
+  const prefix = bare.toLowerCase()
+  if (!CONTENT_ADDRESS_PATTERN.test(prefix)) {
+    throw new AttachmentError(
+      'Attachment reference must be a sha256 digest or a hex prefix of at least 8 characters.',
+      'INVALID_ATTACHMENT_REF',
+    )
+  }
+  const bucket = join(root, 'objects', prefix.slice(0, 2))
+  let entries: string[]
+  try {
+    entries = await readdir(bucket)
+  } catch (error) {
+    signal?.throwIfAborted()
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return undefined
+    throw new AttachmentError('Unable to look up image attachment.', 'ATTACHMENT_READ_FAILED', { cause: error })
+  }
+  signal?.throwIfAborted()
+  const matches = entries.filter(entry => entry.startsWith(prefix)).sort()
+  if (matches.length === 0) return undefined
+  if (matches.length > 1) {
+    throw new AttachmentError(
+      `Attachment reference "${reference}" matches ${matches.length} objects; name the full sha256 digest.`,
+      'AMBIGUOUS_ATTACHMENT_REFERENCE',
+    )
+  }
+  const sha256 = matches[0]
+  if (sha256 === undefined) return undefined
+  const data = new Uint8Array(await readFile(join(bucket, sha256), { signal }))
+  signal?.throwIfAborted()
+  if (digest(data) !== sha256) throw new AttachmentError('Stored attachment failed integrity verification.', 'ATTACHMENT_CORRUPT')
+  const metadata = await probeImage(data)
+  signal?.throwIfAborted()
+  return {
+    ref: {
+      attachmentId: AttachmentId(`sha256:${sha256}`),
+      mediaType: metadata.mediaType,
+      bytes: data.byteLength,
+      width: metadata.width,
+      height: metadata.height,
+    },
+    data,
+  }
 }
