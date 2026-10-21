@@ -182,6 +182,8 @@
       "@deepseek-ai/dsh-llm/message": ["./packages/llm/llm/src/message.ts"],
       "@deepseek-ai/dsh-commands/brand": ["./packages/interaction/commands/src/brand.ts"],
       "@deepseek-ai/dsh-commands/types": ["./packages/interaction/commands/src/types.ts"],
+      "@deepseek-ai/dsh-image-description": ["./packages/image-description/image-description/src"],
+      "@deepseek-ai/dsh-tool-image-description": ["./packages/image-description/tool-image-description/src"],
       "@deepseek-ai/dsh-jobs/brand": ["./packages/jobs/jobs/src/brand.ts"],
       "@deepseek-ai/dsh-jobs/view": ["./packages/jobs/jobs/src/view.ts"],
       "@deepseek-ai/dsh-credentials/types": ["./packages/credentials/credentials/src/types.ts"],

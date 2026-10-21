@@ -278,6 +278,15 @@
     - id: shell-env
       name: '@deepseek-ai/dsh-shell-env'
 
+    # Image-description seam and its model-facing tool. The seam resolves the
+    # session route first and falls back to a configured vision route; with no
+    # fallback configured it still serves sessions whose own model reads images.
+    - id: image-description
+      name: '@deepseek-ai/dsh-image-description'
+
+    - id: tool-image-description
+      name: '@deepseek-ai/dsh-tool-image-description'
+
     - id: tool-bash
       name: '@deepseek-ai/dsh-tool-bash'
       disabled: !!js process.platform === 'win32'
