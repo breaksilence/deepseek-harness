@@ -1,0 +1,93 @@
+/** The seam prefers the session route, then the configured default, then hands back to the caller. */
+import { Context } from '@deepseek-ai/cordis'
+import { AttachmentId } from '@deepseek-ai/dsh-attachment'
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import { SessionId } from '@deepseek-ai/dsh-session'
+import { expect, it, onTestFinished, vi } from 'vitest'
+import ImageDescription from '../src/index.ts'
+import type { ImageDescriptionUnavailableError } from '../src/index.ts'
+
+const REF: ImageAttachmentRef = {
+  attachmentId: AttachmentId(`sha256:${'a'.repeat(64)}`),
+  mediaType: 'image/png',
+  bytes: 4,
+  width: 1,
+  height: 1,
+}
+
+/**
+ * Mount the seam against a stub llm service.
+ * @param imageCapable - routes that declare image input, as `provider/model`.
+ * @param config - deployment config for the mounted plugin.
+ * @returns the mounted seam and the prepareCall spy.
+ */
+async function mount(
+  imageCapable: readonly string[],
+  config: Record<string, unknown> = {},
+): Promise<{ describe: (request: Record<string, unknown>) => Promise<unknown>; prepareCall: ReturnType<typeof vi.fn>; ctx: Context }> {
+  const ctx = new Context()
+  onTestFinished(() => ctx.fiber.dispose())
+  const prepareCall = vi.fn(async (call: unknown) => ({ config: call, stream: async function* () {} }))
+  ctx.provide('llm', {
+    resolveModelInfo: (provider: string, model: string) => Promise.resolve({
+      provider,
+      name: model,
+      inputModalities: imageCapable.includes(`${provider}/${model}`) ? ['text', 'image'] : ['text'],
+    }),
+    prepareCall,
+  } as never)
+  await ctx.plugin(ImageDescription, config as never)
+  return { describe: request => ctx.imageDescription.describe(request as never), prepareCall, ctx }
+}
+
+it('reads with the session route when that route accepts images', async () => {
+  const seam = await mount(['p/vision'])
+
+  await expect(seam.describe({
+    sessionId: SessionId('session-1'),
+    ref: REF,
+    selection: { provider: 'p', model: 'vision' },
+  })).rejects.toMatchObject({ code: 'EMPTY_DESCRIPTION' })
+  expect(seam.prepareCall).toHaveBeenCalledWith(
+    expect.objectContaining({ provider: 'p', model: 'vision' }),
+    undefined,
+  )
+})
+
+it('falls back to the configured route when the session route is text only', async () => {
+  const seam = await mount(['p/fallback'], { visionProvider: 'p', visionModel: 'fallback' })
+
+  await expect(seam.describe({
+    sessionId: SessionId('session-1'),
+    ref: REF,
+    selection: { provider: 'p', model: 'plain' },
+  })).rejects.toMatchObject({ code: 'EMPTY_DESCRIPTION' })
+  expect(seam.prepareCall).toHaveBeenCalledWith(
+    expect.objectContaining({ provider: 'p', model: 'fallback' }),
+    undefined,
+  )
+})
+
+it('names the missing configuration and starts no call when no route reads images', async () => {
+  const seam = await mount([], {})
+
+  const failure = await seam.describe({
+    sessionId: SessionId('session-1'),
+    ref: REF,
+    selection: { provider: 'p', model: 'plain' },
+  }).catch((error: unknown) => error as ImageDescriptionUnavailableError)
+
+  expect(failure).toMatchObject({ code: 'NO_VISION_MODEL_CONFIGURED' })
+  expect((failure as Error).message).toContain('read_image')
+  expect(seam.prepareCall).not.toHaveBeenCalled()
+})
+
+it('reports the route in force and accepts a runtime override', async () => {
+  const seam = await mount([], { visionProvider: 'p', visionModel: 'deployed' })
+
+  expect(seam.ctx.imageDescription.visionModel()).toEqual({ provider: 'p', model: 'deployed' })
+  seam.ctx.imageDescription.configureVisionModel({ provider: 'p', model: 'override' })
+  expect(seam.ctx.imageDescription.visionModel()).toEqual({ provider: 'p', model: 'override' })
+  seam.ctx.imageDescription.configureVisionModel(undefined)
+  expect(seam.ctx.imageDescription.visionModel()).toBeUndefined()
+})
