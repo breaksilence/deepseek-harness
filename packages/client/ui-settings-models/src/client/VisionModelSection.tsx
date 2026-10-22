@@ -138,6 +138,9 @@ function Loaded({ injected }: { injected: InjectFace<VisionModelSectionInjected>
           <button type="button" className={styles['secondaryButton']} onClick={load}>{t('retry')}</button>
         </div>
       )}
+      {state.fallback && groups.length > 0
+        ? <p className={styles['notice']}>{t('visionFallbackAll')}</p>
+        : null}
       {state.catalogError === null && groups.length === 0
         ? <p className={styles['notice']}>{t('visionEmpty')}</p>
         : null}

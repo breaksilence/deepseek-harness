@@ -66,6 +66,8 @@ export interface VisionModelState {
   groups: readonly VisionModelGroup[]
   /** Why the model catalog could not be read; the automatic choice stays offered. */
   catalogError: string | null
+  /** The list shows every route because none declares image input. */
+  fallback: boolean
   /** Route stored in the namespace, absent while it declares no default. */
   stored: VisionRoute | undefined
   /** Route the select shows; {@link AUTOMATIC_ROUTE} selects no default. */
@@ -103,8 +105,29 @@ function acceptsImages(model: ModelCatalogModel): boolean {
  * @returns the groups offering at least one vision-capable model.
  */
 export function visionModelGroups(groups: readonly ModelProviderGroup[]): VisionModelGroup[] {
+  return modelGroups(groups, true)
+}
+
+/**
+ * Every catalog route, grouped by provider. A deployment whose adapters state no
+ * input modalities would otherwise offer nothing to choose, so the page falls
+ * back to the complete list and says that the choice may not read images.
+ * @param groups - provider groups of the Host model catalog.
+ * @returns the groups as catalogued, without any modality filter.
+ */
+export function allModelGroups(groups: readonly ModelProviderGroup[]): VisionModelGroup[] {
+  return modelGroups(groups, false)
+}
+
+/**
+ * Project catalog groups into the option groups the page renders.
+ * @param groups - provider groups of the Host model catalog.
+ * @param imagesOnly - keep only models that declare image input.
+ * @returns the groups that keep at least one model.
+ */
+function modelGroups(groups: readonly ModelProviderGroup[], imagesOnly: boolean): VisionModelGroup[] {
   return groups.flatMap((group) => {
-    const models = group.models.filter(acceptsImages).map((model): VisionModelOption => ({
+    const models = group.models.filter(model => !imagesOnly || acceptsImages(model)).map((model): VisionModelOption => ({
       key: visionRouteKey({ provider: group.id, model: model.id }),
       provider: group.id,
       providerName: group.name,
@@ -159,6 +182,7 @@ const INITIAL: VisionModelState = {
   writable: false,
   groups: [],
   catalogError: null,
+  fallback: false,
   stored: undefined,
   draftKey: AUTOMATIC_ROUTE,
   saving: false,
@@ -296,7 +320,12 @@ export class VisionModelSettingsStore {
     namespace: SettingsNamespaceView,
     catalog: RemoteResult<{ groups: readonly ModelProviderGroup[] }>,
   ): void {
-    const groups = catalog.ok ? visionModelGroups(catalog.value.groups) : []
+    const visionGroups = catalog.ok ? visionModelGroups(catalog.value.groups) : []
+    // Adapters that state no input modalities advertise nothing vision-capable;
+    // offering an empty picker would hide the whole model list, so fall back to
+    // it and let the page say the choice may not read images.
+    const fallback = catalog.ok && visionGroups.length === 0
+    const groups = fallback ? allModelGroups(catalog.value.groups) : visionGroups
     this.routes = new Map(groups.flatMap(group => group.models.map(
       (option): [string, VisionRoute] => [option.key, { provider: option.provider, model: option.model }],
     )))
@@ -308,6 +337,7 @@ export class VisionModelSettingsStore {
       s.error = null
       s.writable = writable
       s.groups = groups
+      s.fallback = fallback
       s.catalogError = catalog.ok ? null : catalog.error.message
       s.stored = stored
       // A staged choice survives the refresh; a draft whose route the current
