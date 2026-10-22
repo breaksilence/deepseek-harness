@@ -871,22 +871,24 @@ describe('continuable image Queue prompts', () => {
     },
   }
 
-  it('refuses an image follow-up when the child model declines image input, leaving no partial message', async () => {
+  it('delivers an image follow-up as text when the child model declines image input', async () => {
     const { ctx, parent } = await setup([textResponse('child work')])
     const started = await ctx.subagents.startActivation({ ...startSpec(parent), delivery: 'parent' })
     await waitNoActivation(ctx, started.childId)
     const resolve = vi.spyOn(ctx.llm, 'resolveModelInfo')
       .mockResolvedValue({ inputModalities: ['text'] } as never)
 
-    await expect(queuePrompt(ctx, parent, started.childId, [
+    await queuePrompt(ctx, parent, started.childId, [
       { type: 'text' as const, text: 'see this' },
       imageBlock,
-    ]))
-      .rejects.toMatchObject({ code: 'MODEL_DOES_NOT_SUPPORT_IMAGES' })
+    ])
 
+    // The delegation survives: the instruction arrives and the image becomes
+    // the same placeholder a text-only route receives, so the child can act on
+    // the handle instead of the whole delivery failing.
     expect(resolve).toHaveBeenCalledWith('mock', 'mock', testSignal)
     const loaded = await loadStoredSession(ctx.sessionPersistence, started.childId)
-    expect(hasUserText(loaded.events, 'see this')).toBe(false)
+    expect(hasUserText(loaded.events, 'see this')).toBe(true)
     await drainManager(ctx)
   })
 

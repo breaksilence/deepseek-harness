@@ -12,7 +12,14 @@ import type {} from '@deepseek-ai/dsh-working-directory'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent, AgentOptions, CreateAgentOptions } from '@deepseek-ai/dsh-agent'
 import { brandString } from '@deepseek-ai/dsh-brand'
-import { ReasoningEffortId, contentHasImage, createUserMessage, errorChain } from '@deepseek-ai/dsh-llm'
+import { ReasoningEffortId, contentHasImage, createUserMessage, errorChain, projectImagesForTextModel } from '@deepseek-ai/dsh-llm'
+
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    /** Transient projection of parent image content for a text-only child. */
+    'subagent-image-downgrade': { kind: 'subagent-image-downgrade' }
+  }
+}
 import type { ContentBlock, MessageId, MessageSource } from '@deepseek-ai/dsh-llm'
 import { SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { SessionId, SessionEvent, UserMessage } from '@deepseek-ai/dsh-session'
@@ -1261,14 +1268,17 @@ export class SubagentManager {
         if (disposal !== undefined) {
           return disposal.then(() => undefined, () => undefined)
         }
+        let delivered = content
         if (contentHasImage(content)) {
-          await this.assertImageCapable(requireLocalActivation(activation).handle.agent, options.signal)
+          delivered = await this.downgradeImageContent(
+            requireLocalActivation(activation).handle.agent, content, options.signal,
+          )
           if (activation.closing !== undefined) {
             await Promise.allSettled([activation.closing])
             return undefined
           }
         }
-        const messageId = this.submitAdmitted(activation, content, options, parent)
+        const messageId = this.submitAdmitted(activation, delivered, options, parent)
         this.announce(activation)
         return messageId
       })
@@ -1392,13 +1402,16 @@ export class SubagentManager {
     commit?: () => void,
   ): Promise<MessageId> {
     try {
+      let delivered = content
       if (contentHasImage(content)) {
-        await this.assertImageCapable(requireLocalActivation(activation).handle.agent, options.signal)
+        delivered = await this.downgradeImageContent(
+          requireLocalActivation(activation).handle.agent, content, options.signal,
+        )
         if (activation.closing !== undefined) {
           throw new SubagentError(`subagent "${activation.childId}" is closing`, 'ACTIVATION_CLOSING')
         }
       }
-      const messageId = this.submitAdmitted(activation, content, options, parent)
+      const messageId = this.submitAdmitted(activation, delivered, options, parent)
       commit?.()
       this.announce(activation)
       return messageId
@@ -1436,23 +1449,32 @@ export class SubagentManager {
     return message.id
   }
 
-  /** Refuse image content for a child whose fixed model accepts text only. */
-  private async assertImageCapable(
+  /**
+   * Hand a child whose fixed model accepts text only the same placeholder a
+   * text-only route receives, so delegation still carries the instruction and
+   * the attachment handle instead of failing the whole delivery.
+   * @param agent - the child agent whose route decides readability.
+   * @param content - the parent's message content.
+   * @param signal - cancellation of the route lookup.
+   * @returns the content to deliver, projected when the child cannot read images.
+   */
+  private async downgradeImageContent(
     agent: Agent,
+    content: ContentBlock[],
     signal: AbortSignal,
-  ): Promise<void> {
+  ): Promise<ContentBlock[]> {
     const { provider, model } = agent.options
-    if (provider === undefined || model === undefined) return
+    if (provider === undefined || model === undefined) return content
     const llm = this.ctx.get('llm')
     /* v8 ignore next -- without an LLM registry, delivery defers to projection. */
-    if (llm === undefined) return
+    if (llm === undefined) return content
     const info = await llm.resolveModelInfo(provider, model, signal)
-    if (info.inputModalities !== undefined && !info.inputModalities.includes('image')) {
-      throw new SubagentError(
-        `Model "${model}" does not support image input.`,
-        'MODEL_DOES_NOT_SUPPORT_IMAGES',
-      )
-    }
+    if (info.inputModalities === undefined || info.inputModalities.includes('image')) return content
+    const [message] = projectImagesForTextModel([createUserMessage({
+      content,
+      source: { kind: 'subagent-image-downgrade' },
+    })])
+    return message === undefined ? content : [...message.content]
   }
 
   /** Resolve the persistence service continuable children require, or fail loud. */
