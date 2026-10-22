@@ -252,11 +252,7 @@ describe('staging a choice', () => {
       groups: [{ id: 'textonly', name: 'Text only', models: [{ id: 'plain', name: 'Plain' }] }],
     })))
     await store.load()
-    // No model declares image input, so the page offers the whole catalog and
-    // marks the list as a fallback; the staged route is gone, so the draft
-    // returns to the automatic choice.
-    expect(store.store.getSnapshot()).toMatchObject({ draftKey: AUTOMATIC_ROUTE, fallback: true })
-    expect(store.store.getSnapshot().groups).toHaveLength(1)
+    expect(store.store.getSnapshot()).toMatchObject({ draftKey: AUTOMATIC_ROUTE, groups: [] })
   })
 
   it('falls back to the stored route when a staged one disappears from the catalog', async () => {

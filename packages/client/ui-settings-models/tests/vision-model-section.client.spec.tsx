@@ -177,7 +177,7 @@ describe('VisionModelSection', () => {
         groups: [{ id: 'textonly', name: 'Text only', models: [{ id: 'plain', name: 'Plain' }] }],
       }))),
     }))
-    expect(optionLabels()).toContain('acme / acme-vision')
+    expect(optionLabels()).toEqual([en.visionAutomatic, 'acme / acme-vision'])
     expect(select().value).toBe(visionRouteKey({ provider: 'acme', model: 'acme-vision' }))
   })
 
@@ -194,7 +194,7 @@ describe('VisionModelSection', () => {
     expect(modelCatalog).toHaveBeenCalledTimes(2)
   })
 
-  it('falls back to the whole catalog when no model declares image input', async () => {
+  it('says so when the catalog offers no vision model', async () => {
     await mount(scripted({
       namespaces: [VISION_NS],
       modelCatalog: vi.fn(() => Promise.resolve(remoteOk({
@@ -202,8 +202,8 @@ describe('VisionModelSection', () => {
         groups: [{ id: 'textonly', name: 'Text only', models: [{ id: 'plain', name: 'Plain' }] }],
       }))),
     }))
-    expect(screen.getByText(en.visionFallbackAll)).toBeTruthy()
-    expect(optionLabels().length).toBeGreaterThan(1)
+    expect(screen.getByText(en.visionEmpty)).toBeTruthy()
+    expect(optionLabels()).toEqual([en.visionAutomatic])
   })
 
   it('reports a deployment without the image-description plugin', async () => {
