@@ -18,7 +18,7 @@ import z from '@deepseek-ai/schemastery'
 import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
-import type { Session } from '@deepseek-ai/dsh-session'
+import type { SessionId } from '@deepseek-ai/dsh-session'
 
 declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
@@ -66,8 +66,8 @@ export class ImageDescriptionUnavailableError extends Error {
 
 /** One image to describe. */
 export interface ImageDescriptionRequest {
-  /** Owning session, recorded on the auxiliary request. */
-  session: Session
+  /** Owning session id, recorded on the auxiliary request. */
+  sessionId: SessionId
   /** Durable normalized image reference to read. */
   ref: ImageAttachmentRef
   /** The route the session currently runs, or undefined when it names none. */
@@ -167,7 +167,7 @@ export default class ImageDescription extends Service {
     const options: GenerateOptions = {
       ...call.config,
       messages,
-      sessionId: request.session.id,
+      sessionId: request.sessionId,
       ...request.signal === undefined ? {} : { signal: request.signal },
     }
     const assembler = new BlockAssembler()

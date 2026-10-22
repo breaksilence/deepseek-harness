@@ -79,7 +79,7 @@ export function apply(ctx: Context): void {
       const config = agent.session.requestHeader()?.config
       try {
         const result = await ctx.imageDescription.describe({
-          session: agent.session,
+          sessionId: agent.session.id,
           ref: resolved.ref,
           ...config === undefined ? {} : { selection: { provider: config.provider, model: config.model } },
           ...args.prompt === undefined ? {} : { prompt: args.prompt },
