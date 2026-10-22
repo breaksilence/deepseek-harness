@@ -20,6 +20,7 @@ import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-config-editor'
+import type {} from '@deepseek-ai/dsh-settings'
 
 declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
@@ -130,6 +131,12 @@ export default class ImageDescription extends Service {
   constructor(ctx: Context, config: Config) {
     super(ctx, 'imageDescription')
     this.maxOutputTokens = config.maxOutputTokens ?? 1024
+    // Registering the form presents this plugin as the `image-description`
+    // settings namespace; the client page owns the picker, so the generic form
+    // stays off.
+    ctx.inject(['settings'], (child) => {
+      child.effect(() => child.settings.configure({ auto: false }, ctx.fiber))
+    })
     this.prompt = config.prompt ?? DEFAULT_PROMPT
     if (config.visionProvider !== undefined && config.visionModel !== undefined) {
       this.configured = { provider: config.visionProvider, model: config.visionModel }
