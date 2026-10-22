@@ -37,7 +37,7 @@ kind: "package-reference"
 - `visionProvider` / `visionModel` 必须成对声明后备路由；两者都省略时，本接缝只能服务自身模型可读图的会话。
 - `maxOutputTokens` 限制单次描述的产出长度（默认 `1024`）。
 - `prompt` 替换随每张图发送的默认指令。
-- 设置归属方可在运行时调用 `configureVisionModel(selection)`，让用户选择无需重挂组合即可生效。
+- `visionModel()` 返回当前生效路由，`saveVisionModel(selection)` 应用并写入挂载 profile，于是设置界面可以直接提供模型列表，用户无需手改组合配置。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
@@ -67,7 +67,7 @@ kind: "package-reference"
 <a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与延后工作
 
-- 后备路由是部署级 `Config`，不是设置命名空间；设置归属方需显式调用 `configureVisionModel` 应用。
+- 后备路由保存在部署级 `Config`；Web 的模型设置分区通过 `saveVisionModel` 写入。
 - 每次描述都是一次新的模型调用：没有缓存，同一张图描述两次就计费两次。
 - 图片只从附件存储读取；存储之外的本地文件不是本接缝的来源。
 

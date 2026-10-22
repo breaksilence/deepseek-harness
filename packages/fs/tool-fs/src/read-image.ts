@@ -127,7 +127,11 @@ export async function assertImageCapableRoute(ctx: Context, exec: ToolExecution,
   }
   const active = await llm.resolveModelInfo(provider, model, exec.signal)
   if (active.inputModalities === undefined || !active.inputModalities.includes('image')) {
-    throw new Error(`cannot read "${requestedPath}" as an image: model "${model}" does not declare image input; switch to an image-capable model to read images`)
+    const seam = ctx.get('imageDescription')
+    const steer = seam === undefined
+      ? ''
+      : '; for an image sent as an attachment, call describe_image with its sha256 handle'
+    throw new Error(`cannot read "${requestedPath}" as an image: model "${model}" does not declare image input; switch to an image-capable model to read images${steer}`)
   }
 }
 

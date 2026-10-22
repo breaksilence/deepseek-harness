@@ -239,10 +239,13 @@ export default class ImageDescription extends Service {
     }
     const configured = this.configured
     if (configured !== undefined) return { route: configured, source: 'default' }
+    // The preference order ends here: no vision route of ours can read the
+    // image. Report that plainly and let the caller continue with whatever the
+    // harness already offers, instead of turning our preference into a failure.
     throw new ImageDescriptionUnavailableError(
       sessionRoute === undefined
-        ? 'No model route is known for this session, and no default vision model is configured. Choose one in settings so images can be described.'
-        : `Model "${sessionRoute.model}" does not accept image input, and no default vision model is configured. Choose one in settings so images can be described.`,
+        ? 'No model route is known for this session and no default vision model is set, so this image cannot be read here. Continue with the means you already have: read a local file with read_image, or ask the user to describe it. A user can set a default vision model in Settings.'
+        : `Model "${sessionRoute.model}" does not accept image input and no default vision model is set, so this image cannot be read here. Continue with the means you already have: read a local file with read_image, or ask the user to describe it. A user can set a default vision model in Settings.`,
       'NO_VISION_MODEL_CONFIGURED',
     )
   }

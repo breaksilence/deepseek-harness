@@ -37,7 +37,7 @@ Mount the plugin on the host plane and let a consumer (for example `@deepseek-ai
 - `visionProvider` / `visionModel` state the fallback route together; omitting both leaves the seam able to serve only sessions whose own model reads images.
 - `maxOutputTokens` bounds one description (default `1024`).
 - `prompt` replaces the default instruction sent with every image.
-- A settings owner may call `configureVisionModel(selection)` at runtime so a user choice applies without remounting the composition.
+- `visionModel()` reports the route in force and `saveVisionModel(selection)` applies and persists a choice into the mounting profile, so a settings surface can offer the model list without hand-editing the composition.
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
@@ -68,7 +68,7 @@ The auxiliary request carries no conversation prefix, so it neither reads nor in
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- The fallback route is a deployment `Config`, not a settings namespace; a settings owner applies it by calling `configureVisionModel`.
+- The fallback route is stored in the deployment `Config`; the Web Models settings section writes it through `saveVisionModel`.
 - Every description is a fresh model call: no caching, so the same image described twice costs twice.
 - Images are read from the attachment store; local files outside the store are not a source for this seam.
 
