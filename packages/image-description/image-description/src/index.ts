@@ -14,6 +14,7 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
+import type { Volatile } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
@@ -92,24 +93,23 @@ export interface ImageDescriptionResult {
 
 /** Deployment configuration for the seam. */
 export interface Config {
-  /** Provider of the fallback vision route; omitted disables the fallback. */
-  visionProvider?: string
-  /** Model of the fallback vision route; omitted disables the fallback. */
-  visionModel?: string
+  /** Provider of the fallback vision route; empty means no fallback route. */
+  visionProvider: Volatile<string>
+  /** Model of the fallback vision route; empty means no fallback route. */
+  visionModel: Volatile<string>
   /** Output bound for one description. */
-  maxOutputTokens?: number
-  /** Instruction sent with every image when the caller states none. */
-  prompt?: string
+  maxOutputTokens: Volatile<number>
 }
 
-/** Runtime configuration schema. */
-export const Config: z<Config> = z.object({
-  visionProvider: z.string(),
-  visionModel: z.string(),
-  maxOutputTokens: z.natural().default(1024),
-  prompt: z.string(),
+/**
+ * Runtime configuration schema. The route fields are volatile, which is what
+ * makes this plugin a settings namespace the client page can read and write.
+ */
+export const ConfigSchema = z.object({
+  visionProvider: z.string().required().volatile(),
+  visionModel: z.string().required().volatile(),
+  maxOutputTokens: z.natural().default(1024).volatile(),
 })
-
 const DEFAULT_PROMPT =
   'Describe this image for a model that cannot see it. Cover what it shows, any text it contains, and the details that matter for the task at hand.'
 
@@ -117,30 +117,26 @@ const DEFAULT_PROMPT =
 export default class ImageDescription extends Service {
   static readonly inject = ['llm']
 
-  static readonly Config = Config
+  static readonly Config = ConfigSchema
 
-  private configured: VisionModelSelection | undefined
+  /** Runtime override set by a settings owner; the live Config value is the fallback. */
+  private override: VisionModelSelection | undefined
   private saves: Promise<void> = Promise.resolve()
   private readonly maxOutputTokens: number
-  private readonly prompt: string
 
   /**
    * @param ctx - context carrying the llm service.
-   * @param config - deployment fallback route, bounds, and default instruction.
+   * @param config - deployment fallback route and output bound.
    */
-  constructor(ctx: Context, config: Config) {
+  constructor(ctx: Context, private readonly config: Config) {
     super(ctx, 'imageDescription')
-    this.maxOutputTokens = config.maxOutputTokens ?? 1024
+    this.maxOutputTokens = config.maxOutputTokens.get()
     // Registering the form presents this plugin as the `image-description`
     // settings namespace; the client page owns the picker, so the generic form
     // stays off.
     ctx.inject(['settings'], (child) => {
       child.effect(() => child.settings.configure({ auto: false }, ctx.fiber))
     })
-    this.prompt = config.prompt ?? DEFAULT_PROMPT
-    if (config.visionProvider !== undefined && config.visionModel !== undefined) {
-      this.configured = { provider: config.visionProvider, model: config.visionModel }
-    }
   }
 
   /**
@@ -149,7 +145,7 @@ export default class ImageDescription extends Service {
    * @param selection - the new fallback route, or undefined to clear it.
    */
   configureVisionModel(selection: VisionModelSelection | undefined): void {
-    this.configured = selection
+    this.override = selection
   }
 
   /**
@@ -157,7 +153,10 @@ export default class ImageDescription extends Service {
    * @returns the configured route, or undefined when the deployment and any runtime override state none.
    */
   visionModel(): VisionModelSelection | undefined {
-    return this.configured
+    if (this.override !== undefined) return this.override
+    const provider = this.config.visionProvider.get()
+    const model = this.config.visionModel.get()
+    return provider === '' || model === '' ? undefined : { provider, model }
   }
 
   /**
@@ -174,9 +173,9 @@ export default class ImageDescription extends Service {
     const editor = this.ctx.get('configEditor')
     if (editor === undefined) return
     const config = {
-      ...this.prompt === undefined ? {} : { prompt: this.prompt },
       maxOutputTokens: this.maxOutputTokens,
-      ...selection === undefined ? {} : { visionProvider: selection.provider, visionModel: selection.model },
+      visionProvider: selection?.provider ?? '',
+      visionModel: selection?.model ?? '',
     }
     const saved = this.saves.then(() => editor.edit(entry, () => config))
     this.saves = saved.catch(() => {})
@@ -195,7 +194,7 @@ export default class ImageDescription extends Service {
     const messages: Message[] = [createUserMessage({
       content: [
         { type: 'image', attachment: request.ref },
-        { type: 'text', text: request.prompt ?? this.prompt },
+        { type: 'text', text: request.prompt ?? DEFAULT_PROMPT },
       ],
       source: { kind: 'image-description' },
     })]
@@ -244,7 +243,7 @@ export default class ImageDescription extends Service {
     if (sessionRoute !== undefined && await this.acceptsImages(sessionRoute)) {
       return { route: sessionRoute, source: 'session' }
     }
-    const configured = this.configured
+    const configured = this.visionModel()
     if (configured !== undefined) return { route: configured, source: 'default' }
     // The preference order ends here: no vision route of ours can read the
     // image. Report that plainly and let the caller continue with whatever the

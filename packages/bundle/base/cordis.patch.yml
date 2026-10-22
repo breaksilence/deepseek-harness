@@ -283,6 +283,9 @@
     # fallback configured it still serves sessions whose own model reads images.
     - id: image-description
       name: '@deepseek-ai/dsh-image-description'
+      config:
+        visionProvider: ''
+        visionModel: ''
 
     - id: tool-image-description
       name: '@deepseek-ai/dsh-tool-image-description'

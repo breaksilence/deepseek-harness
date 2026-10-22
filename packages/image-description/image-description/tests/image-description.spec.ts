@@ -15,16 +15,19 @@ const REF: ImageAttachmentRef = {
   height: 1,
 }
 
+/** Deployment config with no fallback route, so each case states only its own choice. */
+const NO_ROUTE = { visionProvider: '', visionModel: '', maxOutputTokens: 1024 }
+
 /**
  * Mount the seam against a stub llm service.
  * @param imageCapable - routes that declare image input, as `provider/model`.
  * @param config - deployment config for the mounted plugin.
- * @returns the mounted seam and the prepareCall spy.
+ * @returns the mounted context and the prepareCall spy.
  */
 async function mount(
   imageCapable: readonly string[],
-  config: Record<string, unknown> = {},
-): Promise<{ describe: (request: Record<string, unknown>) => Promise<unknown>; prepareCall: ReturnType<typeof vi.fn>; ctx: Context }> {
+  config: Record<string, unknown> = NO_ROUTE,
+): Promise<{ ctx: Context; prepareCall: ReturnType<typeof vi.fn> }> {
   const ctx = new Context()
   onTestFinished(() => ctx.fiber.dispose())
   const prepareCall = vi.fn(async (call: unknown) => ({ config: call, stream: async function* () {} }))
@@ -37,41 +40,42 @@ async function mount(
     prepareCall,
   } as never)
   await ctx.plugin(ImageDescription, config as never)
-  return { describe: request => ctx.imageDescription.describe(request as never), prepareCall, ctx }
+  return { ctx, prepareCall }
 }
 
 it('reads with the session route when that route accepts images', async () => {
-  const seam = await mount(['p/vision'])
+  const { ctx, prepareCall } = await mount(['p/vision'])
 
-  await expect(seam.describe({
+  await expect(ctx.imageDescription.describe({
     sessionId: SessionId('session-1'),
     ref: REF,
     selection: { provider: 'p', model: 'vision' },
   })).rejects.toMatchObject({ code: 'EMPTY_DESCRIPTION' })
-  expect(seam.prepareCall).toHaveBeenCalledWith(
+  expect(prepareCall).toHaveBeenCalledWith(
     expect.objectContaining({ provider: 'p', model: 'vision' }),
     undefined,
   )
 })
 
 it('falls back to the configured route when the session route is text only', async () => {
-  const seam = await mount(['p/fallback'], { visionProvider: 'p', visionModel: 'fallback' })
+  const { ctx, prepareCall } = await mount(['p/fallback'], NO_ROUTE)
+  ctx.imageDescription.configureVisionModel({ provider: 'p', model: 'fallback' })
 
-  await expect(seam.describe({
+  await expect(ctx.imageDescription.describe({
     sessionId: SessionId('session-1'),
     ref: REF,
     selection: { provider: 'p', model: 'plain' },
   })).rejects.toMatchObject({ code: 'EMPTY_DESCRIPTION' })
-  expect(seam.prepareCall).toHaveBeenCalledWith(
+  expect(prepareCall).toHaveBeenCalledWith(
     expect.objectContaining({ provider: 'p', model: 'fallback' }),
     undefined,
   )
 })
 
 it('names the missing configuration and starts no call when no route reads images', async () => {
-  const seam = await mount([], {})
+  const { ctx, prepareCall } = await mount([], NO_ROUTE)
 
-  const failure = await seam.describe({
+  const failure = await ctx.imageDescription.describe({
     sessionId: SessionId('session-1'),
     ref: REF,
     selection: { provider: 'p', model: 'plain' },
@@ -79,15 +83,15 @@ it('names the missing configuration and starts no call when no route reads image
 
   expect(failure).toMatchObject({ code: 'NO_VISION_MODEL_CONFIGURED' })
   expect((failure as Error).message).toContain('read_image')
-  expect(seam.prepareCall).not.toHaveBeenCalled()
+  expect(prepareCall).not.toHaveBeenCalled()
 })
 
 it('reports the route in force and accepts a runtime override', async () => {
-  const seam = await mount([], { visionProvider: 'p', visionModel: 'deployed' })
+  const { ctx } = await mount([])
 
-  expect(seam.ctx.imageDescription.visionModel()).toEqual({ provider: 'p', model: 'deployed' })
-  seam.ctx.imageDescription.configureVisionModel({ provider: 'p', model: 'override' })
-  expect(seam.ctx.imageDescription.visionModel()).toEqual({ provider: 'p', model: 'override' })
-  seam.ctx.imageDescription.configureVisionModel(undefined)
-  expect(seam.ctx.imageDescription.visionModel()).toBeUndefined()
+  expect(ctx.imageDescription.visionModel()).toBeUndefined()
+  ctx.imageDescription.configureVisionModel({ provider: 'p', model: 'override' })
+  expect(ctx.imageDescription.visionModel()).toEqual({ provider: 'p', model: 'override' })
+  ctx.imageDescription.configureVisionModel(undefined)
+  expect(ctx.imageDescription.visionModel()).toBeUndefined()
 })
