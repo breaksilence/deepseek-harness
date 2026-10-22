@@ -22,6 +22,9 @@
     },
     {
       "path": "../../llm/llm"
+    },
+    {
+      "path": "../../boot/config-editor"
     }
   ]
 }

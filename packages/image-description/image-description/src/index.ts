@@ -19,6 +19,7 @@ import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { SessionId } from '@deepseek-ai/dsh-session'
+import type {} from '@deepseek-ai/dsh-config-editor'
 
 declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
@@ -118,6 +119,7 @@ export default class ImageDescription extends Service {
   static readonly Config = Config
 
   private configured: VisionModelSelection | undefined
+  private saves: Promise<void> = Promise.resolve()
   private readonly maxOutputTokens: number
   private readonly prompt: string
 
@@ -141,6 +143,37 @@ export default class ImageDescription extends Service {
    */
   configureVisionModel(selection: VisionModelSelection | undefined): void {
     this.configured = selection
+  }
+
+  /**
+   * The fallback vision route currently in force.
+   * @returns the configured route, or undefined when the deployment and any runtime override state none.
+   */
+  visionModel(): VisionModelSelection | undefined {
+    return this.configured
+  }
+
+  /**
+   * Apply and persist the fallback vision route, so a settings surface can save a
+   * user choice into the mounting profile. A deployment without a configuration
+   * editor keeps only the runtime value.
+   * @param selection - the chosen route, or undefined to clear the stored route.
+   * @returns fulfillment after the optional profile write settles.
+   */
+  async saveVisionModel(selection: VisionModelSelection | undefined): Promise<void> {
+    this.configureVisionModel(selection)
+    const entry = this.ctx.fiber.entry
+    if (entry === undefined) return
+    const editor = this.ctx.get('configEditor')
+    if (editor === undefined) return
+    const config = {
+      ...this.prompt === undefined ? {} : { prompt: this.prompt },
+      maxOutputTokens: this.maxOutputTokens,
+      ...selection === undefined ? {} : { visionProvider: selection.provider, visionModel: selection.model },
+    }
+    const saved = this.saves.then(() => editor.edit(entry, () => config))
+    this.saves = saved.catch(() => {})
+    await saved
   }
 
   /**
