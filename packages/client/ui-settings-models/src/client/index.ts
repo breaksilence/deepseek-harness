@@ -1,8 +1,10 @@
 /**
  * Models settings and product-onboarding plugin, browser half. It registers
- * the Models page plus the ordered preview-notice and official-DeepSeek
- * onboarding dialogs, whose UI shares this package's modal wrapper. The Host
- * settings and credential contracts stay behind their existing wire APIs.
+ * the Models page, the vision-default page (the fallback route that reads
+ * images for a session whose own model cannot), plus the ordered
+ * preview-notice and official-DeepSeek onboarding dialogs, whose UI shares
+ * this package's modal wrapper. The Host settings and credential contracts
+ * stay behind their existing wire APIs.
  * Export discipline:
  * packages/client/AGENTS.md.
  */
@@ -18,6 +20,9 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import { ModelsSection } from './ModelsSection.tsx'
 import type { ModelsSectionInjected } from './ModelsSection.tsx'
+import { VisionModelSection } from './VisionModelSection.tsx'
+import type { VisionModelSectionInjected } from './VisionModelSection.tsx'
+import { VISION_MODEL_SETTINGS_NS, VisionModelSettingsStore } from './vision-model-store.ts'
 import { DeepSeekOnboardingDialog } from './DeepSeekOnboardingDialog.tsx'
 import type { DeepSeekOnboardingInjected } from './DeepSeekOnboardingDialog.tsx'
 import { WelcomeNotice } from './WelcomeNotice.tsx'
@@ -70,9 +75,10 @@ export const inject = [
 ]
 
 /**
- * Register the Models section once the `settings.section` declaration is on
- * the ledger, wire its store to the connection, and keep it fresh on every
- * pushed invalidation (settings, credentials, or provider topology).
+ * Register the Models page and the vision-default page once the
+ * `settings.section` declaration is on the ledger, wire their stores to the
+ * connection, and keep them fresh on every pushed invalidation (settings,
+ * credentials, or provider topology).
  * @param ctx - client root context.
  */
 export function apply(ctx: ClientContext): void {
@@ -112,20 +118,40 @@ export function apply(ctx: ClientContext): void {
     hooks: { welcome: welcomeController.store },
     t,
   })
+  const visionController = new VisionModelSettingsStore(ctx)
+  const visionInjected = (): VisionModelSectionInjected => ({
+    hooks: { visionModel: visionController.store },
+    load: () => { void visionController.load() },
+    pick: (key) => { visionController.pick(key) },
+    save: () => { void visionController.save() },
+    t,
+  })
 
   // Pushed invalidations converge every open surface without polling. The
   // configForms injection makes ui-settings activate first, and remote
   // dispatch preserves listener order; its listener therefore starts the
   // mirror refresh before this store joins that refresh. The welcome notice
-  // follows its settings scope, so it needs no subscription here.
+  // follows its settings scope, so it needs no subscription here. The vision
+  // section reads the same document, and its own namespace write is one of the
+  // invalidations that reaches it.
+  const refreshVision = (): void => {
+    if (visionController.store.getSnapshot().status === 'idle') return
+    void visionController.load()
+  }
   ctx.effect(() => {
     const refreshModels = (): void => { refreshIfLoaded(controller) }
     const disposers = [
-      ctx.remote.$on('settings/document-updated', () => { refreshModels() }),
+      ctx.remote.$on('settings/document-updated', (ns) => {
+        refreshModels()
+        if (ns === VISION_MODEL_SETTINGS_NS) refreshVision()
+      }),
       ctx.remote.$on('credentials/record-updated', refreshModels),
       ctx.remote.$on('credentials/reference-updated', refreshModels),
       ctx.remote.$on('llm/adapters-updated', refreshModels),
-      ctx.on('connection/reset', refreshModels),
+      ctx.on('connection/reset', () => {
+        refreshModels()
+        refreshVision()
+      }),
     ]
     return () => {
       welcomeController.dispose()
@@ -144,6 +170,15 @@ export function apply(ctx: ClientContext): void {
       'settings.models.footer': { kind: 'list', scope: 'root' },
     },
   }, ModelsSection))
+  // The vision default is a second page rather than a row on Models: it
+  // chooses a deployment-wide fallback route, not a provider this page owns.
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section',
+    id: 'image-description',
+    order: 20,
+    label: () => t('visionNav'),
+    inject: visionInjected,
+  }, VisionModelSection))
   if (!('dshDesktop' in globalThis)) ctx.slots.inject('settings.onboarding', () => ctx.slots.register({
     name: 'settings.onboarding',
     id: 'welcome-notice',

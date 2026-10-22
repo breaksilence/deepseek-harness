@@ -15,6 +15,7 @@ import {
   WELCOME_NOTICE_ACK_FIELD, WELCOME_NOTICE_SETTINGS_NAMESPACE, WELCOME_NOTICE_VERSION,
 } from '../src/onboarding-copy.ts'
 import { ModelsSection } from '../src/client/ModelsSection.tsx'
+import { VisionModelSection } from '../src/client/VisionModelSection.tsx'
 import { DeepSeekOnboardingDialog } from '../src/client/DeepSeekOnboardingDialog.tsx'
 import { WelcomeNotice } from '../src/client/WelcomeNotice.tsx'
 import type { IndexInjection } from '@deepseek-ai/dsh-host-webserver'
@@ -47,7 +48,19 @@ async function bench(mock = RemoteMock.create().load(remoteDefaultResponses), se
       ...services,
     },
     settings: mock.remote.settings,
-    session: { initializeDefaultModel: vi.fn(async () => ({ ok: true, value: undefined })) },
+    session: {
+      initializeDefaultModel: vi.fn(async () => ({ ok: true, value: undefined })),
+      modelCatalog: vi.fn(() => Promise.resolve(ok({
+        default: { provider: 'deepseek-account', model: 'vision-one' },
+        routableProviders: ['deepseek-account'],
+        groups: [{
+          id: 'deepseek-account',
+          name: 'DeepSeek Account',
+          models: [{ id: 'vision-one', name: 'Vision One', inputModalities: ['text', 'image'] }],
+        }],
+        failures: [],
+      }))),
+    },
   })
   await ctx.plugin({ inject: [...settingsInject], apply: settingsApply }).await()
   return { ctx, slots: ctx.get('slots') as SlotRegistry, locale, remote }
@@ -82,7 +95,7 @@ describe('ui-settings-models apply', () => {
       expect(slots.entries('settings.onboarding').map(entry => entry.options.id)).toEqual(['welcome-notice', 'deepseek-official'])
       const onboarding = slots.entries('settings.onboarding').find(entry => entry.options.id === 'deepseek-official')!
       expect((onboarding.inject as () => { automatic: boolean })().automatic).toBe(false)
-      expect(slots.entries('settings.section').map(entry => entry.options.id)).toEqual(['models'])
+      expect(slots.entries('settings.section').map(entry => entry.options.id)).toEqual(['models', 'image-description'])
       await plugin.dispose()
       expect(slots.entries('settings.onboarding')).toEqual([])
       await host.dispose()
@@ -151,6 +164,19 @@ describe('ui-settings-models apply', () => {
     )()
     expect(deepSeekInjected.hooks.models).toBe(injected.controller.store)
     expect(typeof deepSeekInjected.operations.storeCredential).toBe('function')
+    // The vision default is a second page in the same nav list.
+    const vision = before.slots.entries('settings.section').find(candidate => candidate.options.id === 'image-description')!
+    expect(vision.component).toBe(VisionModelSection)
+    expect(vision.options).toMatchObject({ id: 'image-description', order: 20 })
+    expect(resolveSlotLabel(vision.options.label)).toBe('视觉模型')
+    const visionInjected = (
+      vision.inject as unknown as () => import('../src/client/VisionModelSection.tsx').VisionModelSectionInjected
+    )()
+    expect(visionInjected.t('visionNav')).toBe('视觉模型')
+    expect(typeof visionInjected.load).toBe('function')
+    expect(typeof visionInjected.pick).toBe('function')
+    expect(typeof visionInjected.save).toBe('function')
+    expect(visionInjected.hooks.visionModel.getSnapshot().status).toBe('idle')
 
     const after = await bench()
     await after.ctx.plugin({ inject: [...inject], apply }).await()
@@ -161,7 +187,7 @@ describe('ui-settings-models apply', () => {
     expect(after.slots.entries('settings.section')[0]!.component).toBe(ModelsSection)
     expect(after.slots.entries('settings.onboarding')).toHaveLength(2)
     // The self-inflicted ledger notifications hit the duplicate guard.
-    expect(after.slots.entries('settings.section')).toHaveLength(1)
+    expect(after.slots.entries('settings.section')).toHaveLength(2)
   })
 
   it('the label thunk follows the active locale without re-registration', async () => {
@@ -189,7 +215,7 @@ describe('ui-settings-models apply', () => {
     const b = await bench()
     const redeclare = declare(b.slots)
     await b.ctx.plugin({ inject: [...inject], apply }).await()
-    expect(b.slots.entries('settings.section')).toHaveLength(1)
+    expect(b.slots.entries('settings.section')).toHaveLength(2)
     // Declarer unload: the cascade removes our entry while our local
     // disposer variable goes stale.
     redeclare()
@@ -268,6 +294,33 @@ describe('pushed invalidations', () => {
     }
     refreshIfLoaded(idle as import('../src/client/store.ts').ModelsSettingsStore)
     expect(loads).toHaveLength(1)
+  })
+
+  it('refreshes an open vision section on its own namespace invalidation', async () => {
+    const b = await bench()
+    declare(b.slots)
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const entry = b.slots.entries('settings.section')
+      .find(candidate => candidate.options.id === 'image-description')!
+    const injected = (
+      entry.inject as unknown as
+      () => import('../src/client/VisionModelSection.tsx').VisionModelSectionInjected
+    )()
+    const state = (): ReturnType<typeof injected.hooks.visionModel.getSnapshot> => injected.hooks.visionModel.getSnapshot()
+    // An unopened section reads nothing, whatever commits arrive.
+    b.remote.emit('settings/document-updated', ['image-description', 2])
+    expect(state().status).toBe('idle')
+    injected.load()
+    // The fixture document composes no image-description entry.
+    await vi.waitFor(() => { expect(state().status).toBe('unavailable') })
+    const settled = state()
+    // An unrelated namespace leaves an opened section alone.
+    b.remote.emit('settings/document-updated', ['llm-test', 3])
+    expect(state()).toBe(settled)
+    // Its own namespace, which this section's own save also commits, re-reads.
+    b.remote.emit('settings/document-updated', ['image-description', 4])
+    expect(state().status).toBe('loading')
+    await vi.waitFor(() => { expect(state().status).toBe('unavailable') })
   })
 
   it('routes pushed credential invalidation into the shared onboarding join', async () => {

@@ -136,6 +136,17 @@ export const en = {
   onboardingSave: 'Save and continue',
   onboardingSaving: 'Saving…',
   keyRequired: 'Enter an API key to continue.',
+  visionNav: 'Vision model',
+  visionTitle: 'Vision model',
+  visionIntro: 'Choose the model that describes images when a session’s own model cannot read them.',
+  visionDefaultModel: 'Default vision model',
+  visionAutomatic: 'Automatic (no default vision model)',
+  visionEmpty: 'No model in the current list accepts images.',
+  visionCatalogFailed: 'The model list could not be loaded.',
+  visionUnavailable: 'This deployment does not include image description, so there is no default vision model to set.',
+  visionLoadFailed: 'Loading the vision model setting failed',
+  visionSaved: 'Saved.',
+  visionSaveFailed: 'Saving the default vision model failed: {reason}',
 }
 
 /** The settings.models namespace key union. */
@@ -277,4 +288,15 @@ export const zh: { [Key in keyof typeof en]: string } = {
   onboardingSave: '保存并继续',
   onboardingSaving: '保存中…',
   keyRequired: '请输入 API 密钥后继续。',
+  visionNav: '视觉模型',
+  visionTitle: '视觉模型',
+  visionIntro: '选择用来读图的模型：会话自身的模型无法读图时，由它来描述图片。',
+  visionDefaultModel: '默认视觉模型',
+  visionAutomatic: '自动（不设默认视觉模型）',
+  visionEmpty: '当前模型列表中没有支持图片输入的模型。',
+  visionCatalogFailed: '模型列表加载失败。',
+  visionUnavailable: '当前部署未包含图片描述能力，无需设置默认视觉模型。',
+  visionLoadFailed: '加载视觉模型设置失败',
+  visionSaved: '已保存。',
+  visionSaveFailed: '保存默认视觉模型失败：{reason}',
 }
