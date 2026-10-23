@@ -29,3 +29,16 @@ it('reserves headroom even when the history alone would fit', () => {
   // Exactly at capacity leaves no room for the answer itself.
   expect(windowFit(2_000, 2_000, 8_192)).toBe('overflows')
 })
+
+it('marks an assumed capacity as assumed in the annotation', () => {
+  const message = overflowNotice(151_000, 200_000, true)
+  const text = message.content.map(block => block.type === 'text' ? block.text : '').join('')
+  expect(text).toContain('assumed from configuration')
+  expect(text).toContain('200000')
+})
+
+it('keeps the annotation free of assumption wording for a declared capacity', () => {
+  const message = overflowNotice(151_000, 128_000, false)
+  const text = message.content.map(block => block.type === 'text' ? block.text : '').join('')
+  expect(text).not.toContain('assumed')
+})

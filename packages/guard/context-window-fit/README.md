@@ -36,6 +36,7 @@ Mount it on the host plane beside the token meter and a compaction backend:
 
 - `reserveTokens` — headroom kept free below the declared capacity, so the answer itself still fits (default `8192`).
 - `strict` — refuse the step (`reject`) instead of annotating it when compaction did not bring the history under the window (default `false`, annotate).
+- `assumedContextWindow` — capacity to assume for a route that declares none; off by default, and an annotation produced from it says so explicitly.
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation

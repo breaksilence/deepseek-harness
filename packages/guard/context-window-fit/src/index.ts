@@ -35,12 +35,18 @@ export interface Config {
   reserveTokens: number
   /** Refuse the step instead of annotating it when the history still does not fit. */
   strict: boolean
+  /**
+   * Capacity to assume for a route that declares none. Off by default: the guard
+   * never invents a window. An annotation produced from the assumption says so.
+   */
+  assumedContextWindow?: number
 }
 
 /** Configuration schema. */
 export const Config: z<Config> = z.object({
   reserveTokens: z.natural().default(8_192),
   strict: z.boolean().default(false),
+  assumedContextWindow: z.natural(),
 })
 
 export const name = 'context-window-fit'
@@ -72,15 +78,17 @@ export function windowFit(
  * compaction attempt. It names the shortfall and the ways forward rather than
  * presenting the situation as a failure.
  * @param occupiedTokens - measured pressure of the current surface.
- * @param contextWindow - capacity the route declares.
+ * @param contextWindow - capacity the route declares, or the assumed capacity in force.
+ * @param assumed - whether the capacity came from configuration rather than the route.
  * @returns one user message carrying the explanation.
  */
-export function overflowNotice(occupiedTokens: number, contextWindow: number) {
+export function overflowNotice(occupiedTokens: number, contextWindow: number, assumed = false) {
   return createUserMessage({
     content: [{
       type: 'text',
       text: 'This session history does not fit the current model route: about '
-        + `${occupiedTokens} tokens of history against a ${contextWindow}-token context window, `
+        + `${occupiedTokens} tokens of history against a ${contextWindow}-token context window`
+        + `${assumed ? ' (assumed from configuration because the route declares no capacity)' : ''}, `
         + 'and compacting once did not bring it below that. Choose one of these before continuing: '
         + 'compact the session again (/compact) to release more history, switch back to a model with a '
         + 'larger context window, or start a new session for this work.',
@@ -118,8 +126,12 @@ export function apply(ctx: Context, config: Config): void {
     if (provider === undefined || model === undefined) return decision
 
     const info = await ctx.llm.resolveModelInfo(provider, model, signal)
-    const contextWindow = info.context?.contextWindow
-    // An undeclared capacity cannot be judged; the provider error path owns it.
+    const declared = info.context?.contextWindow
+    // A route that declares a capacity is authoritative. Configuration may supply
+    // one for routes that declare none; without either, the guard stays out of the
+    // way because guessing would invent failures.
+    const assumed = declared === undefined
+    const contextWindow = declared ?? config.assumedContextWindow
     if (contextWindow === undefined) return decision
 
     const fits = (): boolean => windowFit(
@@ -140,7 +152,7 @@ export function apply(ctx: Context, config: Config): void {
     if (decision.kind !== 'enter') return decision
     return {
       ...decision,
-      messages: [...decision.messages, overflowNotice(ctx.tokenMeter.measure(agent.session).totalTokens, contextWindow)],
+      messages: [...decision.messages, overflowNotice(ctx.tokenMeter.measure(agent.session).totalTokens, contextWindow, assumed)],
     }
   }, { prepend: true })
 }

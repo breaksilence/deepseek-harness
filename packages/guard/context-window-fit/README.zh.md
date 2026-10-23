@@ -36,6 +36,7 @@ kind: "package-reference"
 
 - `reserveTokens` —— 在声明容量之下预留的余量，保证答案本身还装得下（默认 `8192`）。
 - `strict` —— 压缩后仍装不下时，拒绝该 step（`reject`）而不是追加说明（默认 `false`，即追加说明）。
+- `assumedContextWindow` —— 为未声明容量的路由假定的容量；默认关闭，且由它产生的说明会明确标注这是假定值。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
