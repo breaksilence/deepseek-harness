@@ -29,6 +29,8 @@
             config:
               - id: compaction-basic
                 name: '@deepseek-ai/dsh-compaction-basic'
+              - id: context-window-fit
+                name: '@deepseek-ai/dsh-guard-context-window-fit'
               - id: command-compact
                 name: '@deepseek-ai/dsh-command-compact'
           - id: persistent-shell

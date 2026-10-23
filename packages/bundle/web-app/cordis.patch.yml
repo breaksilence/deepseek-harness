@@ -539,6 +539,10 @@
 - id: compaction-basic
   disabled: true
 
+# The guard hooks per-session steps, so it lives in the preset realm below.
+- id: context-window-fit
+  disabled: true
+
 - id: command-compact
   disabled: true
 
