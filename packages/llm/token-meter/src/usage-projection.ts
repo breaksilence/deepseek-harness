@@ -68,11 +68,23 @@ const pressureSchema: z.ZodType<ContextPressureProjection> = z.object({
   pressureTokens: z.number().int().nonnegative().optional(),
   projectedTokens: z.number().int().nonnegative().optional(),
   contextWindow: z.number().int().positive().optional(),
-}).strict().transform(({ pressureTokens, projectedTokens, contextWindow }) => ({
+  percentRemaining: z.number().int().min(0).max(100).optional(),
+}).strict().transform(({ pressureTokens, projectedTokens, contextWindow, percentRemaining }) => ({
   ...pressureTokens === undefined ? {} : { pressureTokens },
   ...projectedTokens === undefined ? {} : { projectedTokens },
   ...contextWindow === undefined ? {} : { contextWindow },
+  ...percentRemaining === undefined ? {} : { percentRemaining },
 }))
+
+/**
+ * Whole percent of the window still free for the next request.
+ * @param projectedTokens - estimated prompt size of the next request.
+ * @param contextWindow - recorded route capacity.
+ * @returns the clamped, rounded percentage; an overflow reports `0`, never a negative.
+ */
+function percentRemainingOf(projectedTokens: number, contextWindow: number): number {
+  return Math.min(100, Math.max(0, Math.round((1 - projectedTokens / contextWindow) * 100)))
+}
 
 /** Prompt-side pressure of one request: input plus cache traffic, no output. */
 const pressureFrom = (usage: TokenUsage): number =>
@@ -207,12 +219,20 @@ export const contextPressureProjectionDefinition = {
   },
   wire: {
     viewSchema: pressureSchema,
-    view: ({ contextWindow, pressureTokens, surfaceTokens, sampledSurfaceTokens }) => ({
-      ...contextWindow === undefined ? {} : { contextWindow },
-      ...pressureTokens === undefined ? {} : { pressureTokens },
-      ...pressureTokens === undefined || sampledSurfaceTokens === undefined
-        ? {}
-        : { projectedTokens: Math.max(0, pressureTokens + surfaceTokens - sampledSurfaceTokens) },
-    }),
+    view: ({ contextWindow, pressureTokens, surfaceTokens, sampledSurfaceTokens }) => {
+      const projectedTokens = pressureTokens === undefined || sampledSurfaceTokens === undefined
+        ? undefined
+        : Math.max(0, pressureTokens + surfaceTokens - sampledSurfaceTokens)
+      return {
+        ...contextWindow === undefined ? {} : { contextWindow },
+        ...pressureTokens === undefined ? {} : { pressureTokens },
+        ...projectedTokens === undefined ? {} : { projectedTokens },
+        // Both operands are whole values from independent slots, so the share is
+        // derived here rather than stored: every reader sees the same number.
+        ...projectedTokens === undefined || contextWindow === undefined
+          ? {}
+          : { percentRemaining: percentRemainingOf(projectedTokens, contextWindow) },
+      }
+    },
   },
 } satisfies ProjectionDefinition<'contextPressure', ContextPressureState>
