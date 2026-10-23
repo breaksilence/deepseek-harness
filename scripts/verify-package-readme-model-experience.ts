@@ -45,6 +45,9 @@ const NO_MODEL_EXPERIENCE_SECTION: Readonly<Record<string, string>> = {
  * blocks. A package moves on or off this list with its context behavior.
  */
 const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
+  // The guard owns no standing model context: it appends one message only when a
+  // step's history cannot fit its route, and that message is the whole experience.
+  'packages/guard/context-window-fit': { kind: 'indirect', reason: 'Appends one explanatory user message to an oversized step; no standing prompt section or tool schema.' },
   // The seam adds no model-facing text of its own: it returns a description to
   // its consumer, which owns presentation, so its entry lives here rather than
   // as a model-context block.

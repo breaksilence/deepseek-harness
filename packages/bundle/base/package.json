@@ -96,6 +96,7 @@
     "@deepseek-ai/dsh-jobs-local": "workspace:*",
     "@deepseek-ai/dsh-tool-call-timeout-policy": "workspace:*",
     "@deepseek-ai/dsh-token-meter": "workspace:*",
+    "@deepseek-ai/dsh-guard-context-window-fit": "workspace:*",
     "@deepseek-ai/dsh-image-description": "workspace:*",
     "@deepseek-ai/dsh-tool-image-description": "workspace:*",
     "@deepseek-ai/dsh-tool-bash": "workspace:*",

@@ -290,6 +290,12 @@
     - id: tool-image-description
       name: '@deepseek-ai/dsh-tool-image-description'
 
+    # Safety net for a history that outgrew its route (for example after switching
+    # from a large-window model to a small one): compacts once, then annotates the
+    # step with the ways forward unless strict mode refuses it.
+    - id: context-window-fit
+      name: '@deepseek-ai/dsh-guard-context-window-fit'
+
     - id: tool-bash
       name: '@deepseek-ai/dsh-tool-bash'
       disabled: !!js process.platform === 'win32'
