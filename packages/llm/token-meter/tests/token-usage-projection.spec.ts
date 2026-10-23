@@ -400,13 +400,12 @@ describe('contextPressure session projection', () => {
     startStep(session, 1, 1)
     recordContext(session, 'small', 64_000)
     usageChunk(session, { inputTokens: 100, outputTokens: 10 }, 1, 1)
-    // Both operands are present, so the same read also publishes the free share.
     expect(pressure(ctx, session)).toEqual({
-      pressureTokens: 100, projectedTokens: 100, contextWindow: 64_000, percentRemaining: 100,
+      pressureTokens: 100, projectedTokens: 100, contextWindow: 64_000,
     })
     recordContext(session, 'large', 256_000)
     expect(pressure(ctx, session)).toEqual({
-      pressureTokens: 100, projectedTokens: 100, contextWindow: 256_000, percentRemaining: 100,
+      pressureTokens: 100, projectedTokens: 100, contextWindow: 256_000,
     })
   })
 
@@ -457,35 +456,9 @@ describe('contextPressure session projection', () => {
       pressureTokens: 42,
       projectedTokens: 42,
       contextWindow: 64_000,
-      percentRemaining: 100,
     })
   })
 
-  it('publishes the whole free share when both operands are present', async () => {
-    const { ctx, session } = await harness()
-    startStep(session, 1, 1)
-    recordContext(session, 'small', 1_000)
-    usageChunk(session, { inputTokens: 800, outputTokens: 10 }, 1, 1)
-    expect(pressure(ctx, session).percentRemaining).toBe(20)
-  })
-
-  it('omits the free share while the route advertises no capacity', async () => {
-    const { ctx, session } = await harness()
-    startStep(session, 1, 1)
-    usageChunk(session, { inputTokens: 800, outputTokens: 10 }, 1, 1)
-    const value = pressure(ctx, session)
-    expect(value.projectedTokens).toBe(800)
-    expect(value).not.toHaveProperty('contextWindow')
-    expect(value).not.toHaveProperty('percentRemaining')
-  })
-
-  it('clamps an overflow to zero rather than reporting a negative share', async () => {
-    const { ctx, session } = await harness()
-    startStep(session, 1, 1)
-    recordContext(session, 'tiny', 1_000)
-    usageChunk(session, { inputTokens: 1_500, outputTokens: 10 }, 1, 1)
-    expect(pressure(ctx, session).percentRemaining).toBe(0)
-  })
   it('carries the sample forward over surface growth and a compaction', async () => {
     const { ctx, session } = await harness()
     recordContext(session, 'large', 128_000)

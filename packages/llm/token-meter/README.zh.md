@@ -65,7 +65,7 @@ const price = ctx.tokenMeter.estimateMessage(message)
 
 ### 解读数字
 
-占用是参考数字，不是计费记录：harness 中没有任何机制依据它做决定，压缩读取的是 `measure()`。UI 用测量压力除以所选模型独立解析的容量来计算占用；`contextPressure` 在两个操作数都已知时直接发布这个除法结果 `percentRemaining`（仍可用的整百分比，钳位 `[0, 100]`），于是每个读取方显示同一个数字，而不是各自重算。`contextBreakdown` 数字是估算值，其总和不会等于 `projectedTokens`；后者的提供方锚点恰好携带启发式误差——CJK 文本与 JSON schema 在每 token 四字符下严重低估。
+占用是参考数字，不是计费记录：harness 中没有任何机制依据它做决定，压缩读取的是 `measure()`。UI 用测量压力除以所选模型独立解析的容量来计算占用。`contextBreakdown` 数字是估算值，其总和不会等于 `projectedTokens`；后者的提供方锚点恰好携带启发式误差——CJK 文本与 JSON schema 在每 token 四字符下严重低估。
 
 -----
 

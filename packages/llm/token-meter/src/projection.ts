@@ -45,13 +45,6 @@ export interface ContextPressureProjection {
   projectedTokens?: number
   /** Newest recorded route capacity; absent when no adapter advertised one. */
   contextWindow?: number
-  /**
-   * Whole percent of {@link contextWindow} still free for the next request,
-   * clamped to `[0, 100]`. Derived from {@link projectedTokens} and
-   * {@link contextWindow} at publish time, so it carries no state of its own and
-   * is present exactly when both operands are.
-   */
-  percentRemaining?: number
 }
 
 /**
