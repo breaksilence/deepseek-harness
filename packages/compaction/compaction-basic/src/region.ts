@@ -16,6 +16,7 @@ import {
 } from '@deepseek-ai/dsh-compaction'
 import type { CompactionResult } from '@deepseek-ai/dsh-compaction'
 import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
+import type { CompactionTrigger } from '@deepseek-ai/dsh-compaction'
 import { createUserMessage, errorChain } from '@deepseek-ai/dsh-llm'
 import type { Message, UserMessage } from '@deepseek-ai/dsh-llm'
 import type { TokenMeasurement, TokenMeter } from '@deepseek-ai/dsh-token-meter'
@@ -61,6 +62,8 @@ interface CompactionTransactionOptions {
   readonly flush?: () => Promise<void>
   /** Manual command that initiated this transaction, when present. */
   readonly sourceCommandId?: CommandId
+  /** Why the seam started this transaction; absent for manual compaction. */
+  readonly trigger?: CompactionTrigger
 }
 
 interface CompactionEntryState {
@@ -205,6 +208,7 @@ export async function compactSurfaceRegion(
   const lifecycle = {
     compactionId,
     ...options.sourceCommandId === undefined ? {} : { sourceCommandId: options.sourceCommandId },
+    ...options.trigger === undefined ? {} : { trigger: options.trigger },
     turn: owner,
   }
   const startEvent = session.append('compaction/start', lifecycle)
@@ -493,6 +497,7 @@ function commitCompactionBody(
     ...startEvent.data.sourceCommandId === undefined
       ? {}
       : { sourceCommandId: startEvent.data.sourceCommandId },
+    ...startEvent.data.trigger === undefined ? {} : { trigger: startEvent.data.trigger },
     summary,
     ...callRecord,
     shadowedRange: { start, end },
@@ -512,6 +517,7 @@ function commitCompactionBody(
     ...startEvent.data.sourceCommandId === undefined
       ? {}
       : { sourceCommandId: startEvent.data.sourceCommandId },
+    ...startEvent.data.trigger === undefined ? {} : { trigger: startEvent.data.trigger },
     startSeq: startEvent.seq,
     summarySeq: summaryEvent.seq,
     summary,

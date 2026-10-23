@@ -298,7 +298,7 @@ export class BasicCompactionEngine extends CompactionEngine {
       }
       const range = selectCompactableRange(agent.session, measurement, 0)
       if (range === null) return null
-      return this.compactRegion(range.start, range.end, agent, signal)
+      return this.compactRegion(range.start, range.end, agent, signal, { trigger })
     }
 
     const info = await this.ctx.llm.resolveModelInfo(target.provider, target.model, signal)
@@ -335,7 +335,7 @@ export class BasicCompactionEngine extends CompactionEngine {
         /* v8 ignore next -- paired with the defensive post-success branch above. */
         break
       }
-      result = await this.compactRegion(range.start, range.end, agent, signal)
+      result = await this.compactRegion(range.start, range.end, agent, signal, { trigger })
       measurement = meter.measure(agent.session)
       if (measurement.totalTokens < spec.thresholdTokens) return result
     }
@@ -360,6 +360,7 @@ export class BasicCompactionEngine extends CompactionEngine {
     end: SessionSeq,
     agent: Agent,
     signal?: AbortSignal,
+    options?: { trigger?: CompactionTrigger },
   ): Promise<CompactionResult> {
     return compactSurfaceRegion(
       this.regionDependencies(),
@@ -367,7 +368,11 @@ export class BasicCompactionEngine extends CompactionEngine {
       start,
       end,
       agent,
-      { owner: 'current-turn', stability: 'whole-surface' },
+      {
+        owner: 'current-turn',
+        stability: 'whole-surface',
+        ...options?.trigger === undefined ? {} : { trigger: options.trigger },
+      },
       signal,
     )
   }

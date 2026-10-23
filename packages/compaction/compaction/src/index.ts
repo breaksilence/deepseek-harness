@@ -189,6 +189,10 @@ export abstract class CompactionEngine extends Service {
     end: SessionSeq,
     agent: CompactionAgentContext,
     signal?: AbortSignal,
+    options?: {
+      /** Why this region was chosen, recorded on the compaction events. */
+      trigger?: CompactionTrigger
+    },
   ): Promise<CompactionResult>
 }
 

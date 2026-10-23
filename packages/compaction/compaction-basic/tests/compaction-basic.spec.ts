@@ -602,6 +602,18 @@ describe('pressure measurement and retention', () => {
       .resolves.not.toBeNull()
   })
 
+  it('records why each automatic compaction ran', async () => {
+    const compact = service(compactConfig)
+    const session = conversation()
+    await compact.compactIfNeeded(agent(session, MODEL), 'pressure', SIGNAL)
+    const pressure = session.snapshotEvents().findLast(event => event.type === 'compaction/summary')
+    expect(pressure?.data).toMatchObject({ trigger: 'pressure' })
+
+    const overflowSession = conversation()
+    await compact.compactIfNeeded(agent(overflowSession, MODEL), 'context-overflow', SIGNAL)
+    const overflow = overflowSession.snapshotEvents().findLast(event => event.type === 'compaction/summary')
+    expect(overflow?.data).toMatchObject({ trigger: 'context-overflow' })
+  })
   it('forwards turn cancellation to proactive model metadata resolution', async () => {
     const ctx = createContext()
     const resolveModelInfo = vi.spyOn(ctx.llm, 'resolveModelInfo')
