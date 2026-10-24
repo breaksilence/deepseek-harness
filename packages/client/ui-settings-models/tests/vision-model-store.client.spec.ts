@@ -89,7 +89,7 @@ function scripted(overrides: {
 
 /** The page plugin's context, scripted down to the two namespaces this store reaches. */
 function storeOn(remote: object): { store: VisionModelSettingsStore; ctx: StoreContext } {
-  const ctx: StoreContext = Object.assign(new Context(), { remote }) as StoreContext
+  const ctx: StoreContext = Object.assign(new Context(), { remote })
   return { store: new VisionModelSettingsStore(ctx), ctx }
 }
 
@@ -247,10 +247,10 @@ describe('staging a choice', () => {
     store.pick(visionRouteKey({ provider: 'openai', model: 'gpt-vision' }))
     await store.load()
     expect(store.store.getSnapshot().draftKey).toBe(visionRouteKey({ provider: 'openai', model: 'gpt-vision' }))
-    face.modelCatalog.mockImplementation(() => Promise.resolve(remoteOk({
+    face.modelCatalog.mockResolvedValue(remoteOk({
       ...CATALOG,
       groups: [{ id: 'textonly', name: 'Text only', models: [{ id: 'plain', name: 'Plain' }] }],
-    })))
+    }))
     await store.load()
     expect(store.store.getSnapshot()).toMatchObject({ draftKey: AUTOMATIC_ROUTE, groups: [] })
   })
@@ -259,9 +259,9 @@ describe('staging a choice', () => {
     const face = scripted({ describe: vi.fn(() => Promise.resolve(remoteOk(documentOf([visionWith('openai', 'gpt-vision')])))) })
     const { store } = storeOn(face.remote)
     await store.load()
-    face.describe.mockImplementation(() => Promise.resolve(remoteOk(documentOf([
+    face.describe.mockResolvedValue(remoteOk(documentOf([
       visionWith('acme', 'acme-vision'),
-    ]))))
+    ])))
     await store.load()
     expect(store.store.getSnapshot()).toMatchObject({
       draftKey: visionRouteKey({ provider: 'acme', model: 'acme-vision' }),
@@ -355,7 +355,7 @@ describe('saving', () => {
     await store.save()
     expect(face.update).not.toHaveBeenCalled()
     // Read-only deployment.
-    face.describe.mockImplementation(() => Promise.resolve(remoteOk(documentOf(undefined, false))))
+    face.describe.mockResolvedValue(remoteOk(documentOf(undefined, false)))
     await store.load()
     store.pick(visionRouteKey({ provider: 'openai', model: 'gpt-vision' }))
     await store.save()

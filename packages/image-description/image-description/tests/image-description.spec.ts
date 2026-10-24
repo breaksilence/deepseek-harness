@@ -39,7 +39,7 @@ async function mount(
     }),
     prepareCall,
   } as never)
-  await ctx.plugin(ImageDescription, config as never)
+  await ctx.plugin(ImageDescription, config)
   return { ctx, prepareCall }
 }
 
