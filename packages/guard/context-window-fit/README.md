@@ -32,11 +32,13 @@ Mount it on the host plane beside the token meter and a compaction backend:
   config:
     reserveTokens: 8192
     strict: false
+    pressureRatio: 0.8
 ```
 
 - `reserveTokens` — headroom kept free below the declared capacity, so the answer itself still fits (default `8192`).
 - `strict` — refuse the step (`reject`) instead of annotating it when compaction did not bring the history under the window (default `false`, annotate).
 - `assumedContextWindow` — capacity to assume for a route that declares none; off by default, and an annotation produced from it says so explicitly.
+- `pressureRatio` — share of the usable budget above which the guard posts an earlier, non-blocking notice (default `0.8`; `0` disables that tier).
 
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
@@ -57,7 +59,7 @@ The guard listens on `agent/pre-step` with `prepend: true`, so it observes the d
 <a id="model-experience"></a>
 ## Model Experience
 
-Indirectly, through one user message appended to an oversized step: it names the measured history, the route capacity, and three ways forward (compact again, switch back to a larger window, start a new session).
+Indirectly, through logged user messages: one early notice when the usable budget is nearly spent, and one overflow notice that names the measured history, the route capacity, and three ways forward (compact again, switch back to a larger window, start a new session).
 
 #### KV Cache effect
 

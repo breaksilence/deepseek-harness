@@ -32,16 +32,18 @@ kind: "package-reference"
   config:
     reserveTokens: 8192
     strict: false
+    pressureRatio: 0.8
 ```
 
 - `reserveTokens` —— 在声明容量之下预留的余量，保证答案本身还装得下（默认 `8192`）。
 - `strict` —— 压缩后仍装不下时，拒绝该 step（`reject`）而不是追加说明（默认 `false`，即追加说明）。
 - `assumedContextWindow` —— 为未声明容量的路由假定的容量；默认关闭，且由它产生的说明会明确标注这是假定值。
+- `pressureRatio` —— 可用预算被消耗到该比例时提前给出**不阻断**的提示（默认 `0.8`；`0` 关闭该档）。
 
 <a id="understand-the-implementation"></a>
 ## 理解实现
 
-守卫以 `prepend: true` 监听 `agent/pre-step`，因此能看到其它监听器组装出的决定。它从会话请求头（回退到 agent 选项）解析路由，从解析后的模型信息读取 `context.contextWindow`，并用 `ctx.tokenMeter.measure(...).totalTokens` 测量占用。装不下时调用可选的 `compaction` 服务一次（`context-overflow` 触发）并重新测量。说明以耐久用户消息落库（source.kind 为 context-window-fit），而不是只作为临时 step 输入：模型能看到、回放能重建、会话界面能展示；近期事件扫描保证一轮只说明一次。
+守卫以 `prepend: true` 监听 `agent/pre-step`，因此能看到其它监听器组装出的决定。它从会话请求头（回退到 agent 选项）解析路由，从解析后的模型信息读取 `context.contextWindow`，并用 `ctx.tokenMeter.measure(...).totalTokens` 测量占用。装不下时调用可选的 `compaction` 服务一次（`context-overflow` 触发）并重新测量。守卫分三档：保持沉默、可用预算将尽时的提前提示（`pressureRatio`）、以及它本来要处理的溢出。说明以耐久用户消息落库（source.kind 为 context-window-fit），而不是只作为临时 step 输入：模型能看到、回放能重建、会话界面能展示；近期事件扫描保证一轮只说明一次。
 
 ### 源码地图
 
@@ -57,7 +59,7 @@ kind: "package-reference"
 <a id="model-experience"></a>
 ## 模型体验
 
-间接地，通过在超限 step 上追加一条用户消息：写明测得的占用、路由容量与三条出路（继续压缩、换回更大窗口、新开会话）。
+间接地，通过已记录的用户消息：可用预算将尽时一条提前提示，超限时一条写明测得的占用、路由容量与三条出路（继续压缩、换回更大窗口、新开会话）的说明。
 
 #### KV 缓存影响
 
