@@ -19,7 +19,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { PreStepDecision } from '@deepseek-ai/dsh-agent'
+import type {} from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-token-meter'
 import type {} from '@deepseek-ai/dsh-compaction'
 
@@ -97,18 +97,6 @@ export function overflowNotice(occupiedTokens: number, contextWindow: number, as
   })
 }
 
-/**
- * Whether the step already carries this guard's annotation, so a multi-step turn
- * states the situation once instead of once per step.
- * @param decision - the step decision assembled by the waterfall.
- * @returns whether an annotation is already present.
- */
-function alreadyAnnotated(decision: PreStepDecision): boolean {
-  if (decision.kind !== 'enter') return false
-  return decision.messages.some(message => message.content.some(
-    block => block.type === 'text' && block.text.startsWith('This session history does not fit the current model route:'),
-  ))
-}
 
 /**
  * Register the guard on the agent step boundary.
@@ -116,6 +104,8 @@ function alreadyAnnotated(decision: PreStepDecision): boolean {
  * @param config - reserve headroom and whether to refuse instead of annotating.
  */
 export function apply(ctx: Context, config: Config): void {
+  // One notice per overflow episode: the entry clears when the history fits again.
+  const noticed = new WeakSet<object>()
   ctx.on('agent/pre-step', async ({ agent, signal }, next) => {
     const decision = await next()
     if (decision.kind === 'reject' || signal.aborted) return decision
@@ -137,22 +127,36 @@ export function apply(ctx: Context, config: Config): void {
     const fits = (): boolean => windowFit(
       ctx.tokenMeter.measure(agent.session).totalTokens, contextWindow, config.reserveTokens,
     ) === 'fits'
-    if (fits()) return decision
+    if (fits()) {
+      noticed.delete(agent)
+      return decision
+    }
 
     // One attempt, then re-measure: the guard asks, the compaction service decides
     // how much to release.
     const compaction = ctx.get('compaction')
     if (compaction !== undefined) {
       await compaction.compactIfNeeded(agent, 'context-overflow', signal)
-      if (signal.aborted) return decision
-      if (fits()) return decision
+      if (fits()) {
+        noticed.delete(agent)
+        return decision
+      }
     }
-    if (alreadyAnnotated(decision)) return decision
+    // The notice must be logged, not merely handed to this step: model-visible
+    // input has to be reconstructable from the session log, and a logged user
+    // message is what a session UI and replay can show.
     if (config.strict) return { kind: 'reject' }
-    if (decision.kind !== 'enter') return decision
-    return {
-      ...decision,
-      messages: [...decision.messages, overflowNotice(ctx.tokenMeter.measure(agent.session).totalTokens, contextWindow, assumed)],
+    if (!noticed.has(agent)) {
+      noticed.add(agent)
+      const notice = overflowNotice(ctx.tokenMeter.measure(agent.session).totalTokens, contextWindow, assumed)
+      try {
+        agent.session.append('user/message', notice, { surfaceOp: 'append' })
+      } catch (error) {
+        // A refused surface append must not fail the step; the warning names the
+        // notice that could not be logged.
+        ctx.logger.warn(`context-window-fit: could not log the overflow notice: ${String(error)}`)
+      }
     }
+    return decision
   }, { prepend: true })
 }

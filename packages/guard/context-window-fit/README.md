@@ -41,7 +41,7 @@ Mount it on the host plane beside the token meter and a compaction backend:
 <a id="understand-the-implementation"></a>
 ## Understand the implementation
 
-The guard listens on `agent/pre-step` with `prepend: true`, so it observes the decision every other listener built. It resolves the route from the session request header (falling back to the agent's options), reads `context.contextWindow` from the resolved model info, and measures occupancy with `ctx.tokenMeter.measure(...).totalTokens`. When the pair does not fit, it calls the optional `compaction` service once with the `context-overflow` trigger and re-measures. Its own annotation is recognized by a fixed opening sentence, so a multi-step turn states the situation once.
+The guard listens on `agent/pre-step` with `prepend: true`, so it observes the decision every other listener built. It resolves the route from the session request header (falling back to the agent's options), reads `context.contextWindow` from the resolved model info, and measures occupancy with `ctx.tokenMeter.measure(...).totalTokens`. When the pair does not fit, it calls the optional `compaction` service once with the `context-overflow` trigger and re-measures. The annotation is appended as a durable logged user message (source.kind is context-window-fit) rather than a transient step input, so the model sees it, replay reconstructs it, and a session UI shows it; a recent-event scan keeps a turn to one notice.
 
 ### Source map
 
@@ -68,7 +68,7 @@ The annotation enters the conversation prefix, so it invalidates the cache from 
 
 - The guard judges only routes that declare a capacity; an adapter with no `context.contextWindow` keeps today's behavior, including a provider error on overflow.
 - Compaction is requested once per step and only when the service is mounted; with no compaction backend the guard annotates or refuses immediately.
-- The annotation is model-visible but never stores new state, so replay shows it as part of that turn's messages.
+- The annotation is a logged user message, so it stays in the history and replay shows it in place; it does not change the token accounting of the compacted range.
 
 ### Dev Note
 

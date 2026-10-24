@@ -41,7 +41,7 @@ kind: "package-reference"
 <a id="understand-the-implementation"></a>
 ## 理解实现
 
-守卫以 `prepend: true` 监听 `agent/pre-step`，因此能看到其它监听器组装出的决定。它从会话请求头（回退到 agent 选项）解析路由，从解析后的模型信息读取 `context.contextWindow`，并用 `ctx.tokenMeter.measure(...).totalTokens` 测量占用。装不下时调用可选的 `compaction` 服务一次（`context-overflow` 触发）并重新测量。它自己的说明由固定开头句识别，因此多 step 的一轮只说明一次。
+守卫以 `prepend: true` 监听 `agent/pre-step`，因此能看到其它监听器组装出的决定。它从会话请求头（回退到 agent 选项）解析路由，从解析后的模型信息读取 `context.contextWindow`，并用 `ctx.tokenMeter.measure(...).totalTokens` 测量占用。装不下时调用可选的 `compaction` 服务一次（`context-overflow` 触发）并重新测量。说明以耐久用户消息落库（source.kind 为 context-window-fit），而不是只作为临时 step 输入：模型能看到、回放能重建、会话界面能展示；近期事件扫描保证一轮只说明一次。
 
 ### 源码地图
 
@@ -68,7 +68,7 @@ kind: "package-reference"
 
 - 守卫只判定声明了容量的路由；适配器未提供 `context.contextWindow` 时保持现状，包括溢出时由提供方报错。
 - 每个 step 只请求一次压缩，且仅在压缩服务已挂载时；没有压缩后端时守卫直接追加说明或拒绝。
-- 说明对模型可见但不存储新状态，回放时它作为该轮消息的一部分出现。
+- 说明是一条已记录的用户消息，因此留在历史里、回放中就地显示；它不改变被压缩区间的 token 记账。
 
 ### 开发备注
 
