@@ -14,8 +14,8 @@ import { en, zh } from '../src/client/locales.ts'
 
 afterEach(cleanup)
 
-const t: VisionModelSectionProps['t'] = key => en[key]
-const zhT: VisionModelSectionProps['t'] = key => zh[key]
+const t: NonNullable<VisionModelSectionProps['t']> = key => en[key]
+const zhT: NonNullable<VisionModelSectionProps['t']> = key => zh[key]
 
 type StoreContext = ConstructorParameters<typeof VisionModelSettingsStore>[0]
 
@@ -86,7 +86,7 @@ function scripted(overrides: {
   return { describe, mutate, update, modelCatalog, remote }
 }
 
-async function mount(face = scripted(), copy: VisionModelSectionProps['t'] = t) {
+async function mount(face = scripted(), copy: NonNullable<VisionModelSectionProps['t']> = t) {
   const ctx = Object.assign(new Context(), { remote: face.remote }) as StoreContext
   const controller = new VisionModelSettingsStore(ctx)
   await controller.load()
