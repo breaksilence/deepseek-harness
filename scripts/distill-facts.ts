@@ -76,6 +76,16 @@ ${avoided}
 ${turn.text}`
 }
 
+/**
+ * Whether a reply carries a JSON array at all.
+ * @param reply - model reply text.
+ * @returns true when a bracketed body exists.
+ */
+function looksLikeArray(reply: string): boolean {
+  const start = reply.indexOf('[')
+  return start >= 0 && reply.lastIndexOf(']') > start
+}
+
 function frontMatter(fact: Record<string, unknown>): string {
   return `---\n${JSON.stringify(fact)}\n---\n\n${String(fact.conclusion)}\n`
 }
@@ -114,7 +124,11 @@ export async function distillCandidates(
   let sequence = 0
 
   for (const turn of turns) {
-    const reply = await ask(buildPrompt(turn, rejectedExamples))
+    let reply = await ask(buildPrompt(turn, rejectedExamples))
+    if (!looksLikeArray(reply)) {
+      // Real turns often make the model explain itself; one stricter ask recovers most of those.
+      reply = await ask(`${buildPrompt(turn, rejectedExamples)}\n\n只输出 JSON 数组本身，不要任何解释文字。`)
+    }
     const start = reply.indexOf('[')
     const end = reply.lastIndexOf(']')
     if (start < 0 || end <= start) {
@@ -268,7 +282,7 @@ async function main(): Promise<void> {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, max_tokens: 1200, temperature: 0, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, max_tokens: Number(flag(argv, '--max-tokens', '2400')), temperature: 0, messages: [{ role: 'user', content: prompt }] }),
     })
     const body = await response.json() as { choices?: { message?: { content?: string; reasoning_content?: string } }[] }
     const message = body.choices?.[0]?.message ?? {}

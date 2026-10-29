@@ -76,6 +76,31 @@ describe('confirmFacts', () => {
   })
 })
 
+describe('unparsable replies', () => {
+  const turn = { paths: ['services/billing/handlers/charge.py'], text: '重试必须复用同一个 Idempotency-Key。' }
+
+  it('asks once more when the first reply is prose', async () => {
+    const prompts: string[] = []
+    const ask = async (prompt: string): Promise<string> => {
+      prompts.push(prompt)
+      return prompts.length === 1
+        ? '这条片段看起来没什么可提炼的。'
+        : JSON.stringify([{ conclusion: '重试必须复用同一个 Idempotency-Key', evidence: '重试必须复用同一个 Idempotency-Key', confidence: 0.9 }])
+    }
+    const outcome = await distillCandidates([turn], ask)
+    expect(outcome.accepted).toHaveLength(1)
+    expect(prompts).toHaveLength(2)
+    expect(prompts[1]).toContain('只输出 JSON 数组本身')
+  })
+
+  it('drops the turn when the stricter ask is also prose', async () => {
+    const ask = async (): Promise<string> => '还是解释。'
+    const outcome = await distillCandidates([turn], ask)
+    expect(outcome.accepted).toHaveLength(0)
+    expect(outcome.rejected[0]?.reason).toBe('reply is not a JSON array')
+  })
+})
+
 describe('statisticsOf', () => {
   it('reports yield, drop rate, and the reason histogram', () => {
     const stats = statisticsOf(4, 3, [

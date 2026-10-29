@@ -128,7 +128,7 @@ pnpm exec tsx scripts/draft-conflicts.ts --facts candidates --out conflict-repor
 
 ### 漂移门禁
 
-`distill-facts --report <path>` 写出评审人需要跟上的运行统计：每轮候选数、被丢弃提议的占比、以及丢弃原因。`pnpm run verify-knowledge-baseline -- --distill-report <path>` 会把这两个比率与语料测量一起记录；不提供报告时它们保持 null，因此入库的基线永不依赖模型调用。
+用原始会话文本做蒸馏需要足够的输出预算：推理模型会在写出数组之前花掉大半预算，被截断的回复会按"不可解析"丢弃。把 `--max-tokens` 从 1200 提到 2400 后，八段真实轮次上的产出从每轮 0 条升到 0.75 条，剩下的丢弃全部是"证据引句不是逐字原文"。`distill-facts --report <path>` 写出评审人需要跟上的运行统计：每轮候选数、被丢弃提议的占比、以及丢弃原因。`pnpm run verify-knowledge-baseline -- --distill-report <path>` 会把这两个比率与语料测量一起记录；不提供报告时它们保持 null，因此入库的基线永不依赖模型调用。
 
 `pnpm run verify-knowledge-baseline` 重新测量冻结语料并与 `tests/fixtures/baseline.json` 比对：事实条数与晋升条数一条都不许变少，比率只允许按记录的容差（0.05）向下漂移。回退时它会直接打印"哪个数字从多少掉到多少"，而不是依赖谁记得旧值。
 
