@@ -112,6 +112,24 @@ pnpm exec tsx scripts/verify-knowledge-brain.ts \
 -----
 
 <a id="understand-the-implementation"></a>
+### 评审回路
+
+蒸馏负责提议，评审人负责决定，晋升门负责准入。每一步都是一条独立命令，因此某一步出错不会泄漏进语料：
+
+```sh
+pnpm run distill-facts -- --turns turns.jsonl --out candidates
+pnpm exec tsx scripts/confirm-facts.ts --facts candidates --confirm candidate-1,candidate-2
+pnpm exec tsx scripts/confirm-facts.ts --facts candidates --reject candidate-3 --reason "already covered"
+pnpm run distill-facts -- --turns turns.jsonl --out candidates --skip-rejected candidates/rejected.jsonl
+pnpm exec tsx scripts/draft-conflicts.ts --facts candidates --out conflict-report.md
+```
+
+上面几条命令的顺序是：蒸馏提议，评审人确认或拒绝，之后的蒸馏跳过已拒结论，冲突草案始终只是提议。`rejected/` 是保留目录名：加载器会跳过它，所以被拒的结论即使文档还留在树里也进不了语料。确认只改 `trust` 与 `updatedAt`，结论与证据永不重写。
+
+### 漂移门禁
+
+`pnpm run verify-knowledge-baseline` 重新测量冻结语料并与 `tests/fixtures/baseline.json` 比对：事实条数与晋升条数一条都不许变少，比率只允许按记录的容差（0.05）向下漂移。回退时它会直接打印"哪个数字从多少掉到多少"，而不是依赖谁记得旧值。
+
 ## 实现说明
 
 <details>

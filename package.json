@@ -116,6 +116,7 @@
     "verify-knowledge-brain": "tsx scripts/verify-knowledge-brain.ts --questions packages/experimental/knowledge-brain/tests/fixtures/questions.json",
     "distill-facts": "tsx scripts/distill-facts.ts",
     "verify-knowledge-baseline": "tsx scripts/knowledge-baseline.ts",
+    "verify-knowledge": "pnpm run verify-knowledge-brain && pnpm run verify-knowledge-baseline",
     "verify-repository-layout": "tsx scripts/verify-repository-layout.ts",
     "verify-dsh-package-licenses": "tsx scripts/verify-dsh-package-licenses.ts",
     "verify-config-source-ownership": "tsx scripts/verify-config-source-ownership.ts",

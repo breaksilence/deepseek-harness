@@ -96,18 +96,27 @@ Measured operating points on two real replay sets (843 turns and 198 unseen turn
 | **quality (support ≥2, precision ≥0.80)** | 5 | 64.8% / 72.7% | **91.9% / 96.2%** | **94.6% / 88.5%** |
 | quality | 7 | 55.5% / 59.3% | 98.3% / 100% | 100% / 100% |
 
-Recall is bounded by corpus coverage, not by the floor, and error attribution on the quality corpus found 22 coverage misses against 3 ranking misses. Correct silence is measured against a label proxy, so it is a lower bound.
+Recall is bounded by corpus coverage, not by the floor, and error attribution on the quality corpus found 22 coverage misses against 3 ranking misses: raising `floor` buys silence and costs recall monotonically.
 
-A 17-turn hand check of delivered items measured precision at 23.5% strict (52.9% counting a same-subsystem delivery as useful) against 76.5% for the path proxy, so every precision figure in this README is a labelled upper bound, not ground truth.
+A 17-turn hand check of delivered items measured precision at 23.5% strict (52.9% counting a same-subsystem delivery as useful) against 76.5% for the path proxy, so every precision figure here is a labelled upper bound, not ground truth. Admission has two documented policies: the default requires support ≥5 and precision ≥0.55; a rare-but-precise policy (`--min-support 2 --min-precision 0.80`) admitted four more facts on the same replay sets and raised precision from 76.8%/77.1% to 94.3%/95.7% and correct silence from 65.1%/61.5% to 95.3%/88.5% at equal recall (58.8%/62.8%).
 
+### Review loop
 
+Distillation proposes; a reviewer decides; the gate admits. Each step is a separate command so a mistake in one cannot leak into the corpus:
 
-Recall is bounded by corpus coverage, not by the floor: raising the floor buys silence and costs recall monotonically. Correct silence is measured against a label proxy, so it is a lower bound.
+```sh
+pnpm run distill-facts -- --turns turns.jsonl --out candidates
+pnpm exec tsx scripts/confirm-facts.ts --facts candidates --confirm candidate-1,candidate-2
+pnpm exec tsx scripts/confirm-facts.ts --facts candidates --reject candidate-3 --reason "already covered"
+pnpm run distill-facts -- --turns turns.jsonl --out candidates --skip-rejected candidates/rejected.jsonl
+pnpm exec tsx scripts/draft-conflicts.ts --facts candidates --out conflict-report.md
+```
 
-Admission has two documented policies. The default requires support ≥5 and precision ≥0.55. A rare-but-precise policy (`--min-support 2 --min-precision 0.80`) admitted four more facts on the same replay sets and raised delivery precision from 76.8%/77.1% to 94.3%/95.7%, and correct silence from 65.1%/61.5% to 95.3%/88.5%, at equal recall (58.8%/62.8%).
+In that sequence distillation proposes, a reviewer confirms or rejects, later distillation skips what was rejected, and conflict drafting stays a proposal. `rejected/` is a reserved directory name: the loader skips it, so a rejected claim cannot re-enter the corpus even if its document is left in the tree. Confirmation only changes `trust` and `updatedAt`; the claim and its evidence are never rewritten.
 
+### Drift gate
 
-
+`pnpm run verify-knowledge-baseline` re-measures the frozen corpus and compares against `tests/fixtures/baseline.json`: fact and promoted counts may not shrink at all, and rates may drift down by the recorded tolerance (0.05) only. A regression prints which number fell from what to what instead of relying on someone remembering the old value.
 
 -----
 
