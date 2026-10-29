@@ -348,7 +348,7 @@ export interface Config {
 
 ## `@deepseek-ai/dsh-attachment-local`
 
-- `source`: [`packages/attachment/attachment-local/src/index.ts:61`](../packages/attachment/attachment-local/src/index.ts)
+- `source`: [`packages/attachment/attachment-local/src/index.ts:65`](../packages/attachment/attachment-local/src/index.ts)
 
 ```ts config-catalog
 /** Local attachment backend configuration. */
@@ -1112,6 +1112,29 @@ export interface InspectorOptions {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-experimental-inspector -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-experimental-knowledge-brain -->
+<a id="deepseek-aidsh-experimental-knowledge-brain"></a>
+
+## `@deepseek-ai/dsh-experimental-knowledge-brain`
+
+- `inject`: `tools`
+- `source`: [`packages/experimental/knowledge-brain/src/index.ts:23`](../packages/experimental/knowledge-brain/src/index.ts)
+
+```ts config-catalog
+/** Deployment-owned knowledge brain limits. */
+export interface Config {
+  /** Directory that holds fact documents. Required: the corpus never defaults to the repository. */
+  factsDir: string
+  /** Minimum score for a delivery; below it the tool abstains. Defaults to 5. */
+  floor?: number
+  /** Topic tokens a candidate must share when the caller supplies a topic. Defaults to 2. */
+  readonly minTopicTokens?: number
+  /** Maximum hits returned by one scan. Defaults to 2. */
+  maxScan?: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-experimental-knowledge-brain -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-experimental-ptc-runtime-python -->
 <a id="deepseek-aidsh-experimental-ptc-runtime-python"></a>
 
@@ -1429,6 +1452,35 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-goal -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-guard-context-window-fit -->
+<a id="deepseek-aidsh-guard-context-window-fit"></a>
+
+## `@deepseek-ai/dsh-guard-context-window-fit`
+
+- `inject`: `llm` · `tokenMeter`
+- `source`: [`packages/guard/context-window-fit/src/index.ts:34`](../packages/guard/context-window-fit/src/index.ts)
+
+```ts config-catalog
+/** Deployment configuration for the guard. */
+export interface Config {
+  /** Tokens kept free below the route capacity, so the answer itself can be sent. */
+  reserveTokens: number
+  /** Refuse the step instead of annotating it when the history still does not fit. */
+  strict: boolean
+  /**
+   * Capacity to assume for a route that declares none. Off by default: the guard
+   * never invents a window. An annotation produced from the assumption says so.
+   */
+  assumedContextWindow?: number
+  /**
+   * Share of the usable budget above which the guard tells the session it is
+   * approaching the window. `0` disables the early notice.
+   */
+  pressureRatio: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-guard-context-window-fit -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-headless -->
 <a id="deepseek-aidsh-headless"></a>
 
@@ -1694,6 +1746,28 @@ export interface TlsConfig {
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-host-webserver -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-image-description -->
+<a id="deepseek-aidsh-image-description"></a>
+
+## `@deepseek-ai/dsh-image-description`
+
+- `inject`: `llm`
+- `refs`: `Volatile` (`@deepseek-ai/cordis`)
+- `source`: [`packages/image-description/image-description/src/index.ts:95`](../packages/image-description/image-description/src/index.ts)
+
+```ts config-catalog
+/** Deployment configuration for the seam. */
+export interface Config {
+  /** Provider of the fallback vision route; empty means no fallback route. */
+  visionProvider: Volatile<string>
+  /** Model of the fallback vision route; empty means no fallback route. */
+  visionModel: Volatile<string>
+  /** Output bound for one description. */
+  maxOutputTokens: Volatile<number>
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-image-description -->
 
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-jobs-local -->
 <a id="deepseek-aidsh-jobs-local"></a>
@@ -4691,6 +4765,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-terminal` | — | [`packages/terminal/terminal/src/index.ts`](../packages/terminal/terminal/src/index.ts) |
 | `@deepseek-ai/dsh-tool-call-timeout-policy` | `tools` | [`packages/guard/timeout-policy/src/index.ts`](../packages/guard/timeout-policy/src/index.ts) |
 | `@deepseek-ai/dsh-tool-cordis` | `tools` · `cordisInspect` | [`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts) |
+| `@deepseek-ai/dsh-tool-image-description` | `tools` · `imageDescription` | [`packages/image-description/tool-image-description/src/index.ts`](../packages/image-description/tool-image-description/src/index.ts) |
 | `@deepseek-ai/dsh-tool-schedule` | `tools` | [`packages/schedule/tool-schedule/src/index.ts`](../packages/schedule/tool-schedule/src/index.ts) |
 | `@deepseek-ai/dsh-tool-subagent-control` | `tools` · `subagents` | [`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts) |
 | `@deepseek-ai/dsh-tool-working-directory` | `tools` · `workingDirectory` | [`packages/session/tool-working-directory/src/index.ts`](../packages/session/tool-working-directory/src/index.ts) |

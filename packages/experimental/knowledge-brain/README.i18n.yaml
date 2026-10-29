@@ -1,0 +1,49 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/experimental/knowledge-brain/README.md
+/:
+  en: ea27601e10b19628
+  zh: 78373fe8e2adca7a
+/deepseek-ai-dsh-experimental-knowledge-brain:
+  en: 7b34064e0bb4ab04
+  zh: 2040376a95faa49c
+/deepseek-ai-dsh-experimental-knowledge-brain/summary:
+  en: 11c7882f2f0f4fa2
+  zh: a172e0ee68d53d84
+/deepseek-ai-dsh-experimental-knowledge-brain/table-of-contents:
+  en: adc8ebd04e9d8369
+  zh: d229e725bcacc447
+/deepseek-ai-dsh-experimental-knowledge-brain/use-this-package:
+  en: 49ba6a4542056c05
+  zh: 18befe3d085151b5
+/deepseek-ai-dsh-experimental-knowledge-brain/produce-and-promote-a-corpus:
+  en: 713ae6af2c19b36a
+  zh: fdff818e863863f3
+/deepseek-ai-dsh-experimental-knowledge-brain/understand-the-implementation:
+  en: eb9eecdfb8b0a328
+  zh: a1e875349e9bad13
+/deepseek-ai-dsh-experimental-knowledge-brain/further-exploration:
+  en: 367fdb5882c318a1
+  zh: b3e5a8118ede4520
+/deepseek-ai-dsh-experimental-knowledge-brain/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-experimental-knowledge-brain/model-experience/knowledge-tools:
+  en: 6870d8b99f6284d3
+  zh: 258c5ef54fe33b31
+/deepseek-ai-dsh-experimental-knowledge-brain/model-experience/knowledge-tools/what-the-model-sees:
+  en: 83b3ac39abbd4d73
+  zh: bd0adacceaa0fcdf
+/deepseek-ai-dsh-experimental-knowledge-brain/model-experience/knowledge-tools/token-effect:
+  en: d508bcb3021bcf6a
+  zh: a1e3db33f04c2242
+/deepseek-ai-dsh-experimental-knowledge-brain/model-experience/knowledge-tools/kv-cache-effect:
+  en: 370aff3f5bd5121e
+  zh: ed66e500c515e019
+/deepseek-ai-dsh-experimental-knowledge-brain/known-limitations-and-deferred-work:
+  en: 651c60550bf505eb
+  zh: 902e80c72a7d5ea5
+/deepseek-ai-dsh-experimental-knowledge-brain/known-limitations-and-deferred-work/dev-note:
+  en: 1695988fa56fb865
+  zh: 774d0b68d7b509ca

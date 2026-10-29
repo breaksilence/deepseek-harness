@@ -28,6 +28,8 @@ import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
 import WorkingDirectory from '@deepseek-ai/dsh-working-directory'
 import * as ToolWorkingDirectory from '@deepseek-ai/dsh-tool-working-directory'
 import * as ToolWorktree from '@deepseek-ai/dsh-experimental-tool-worktree'
+import * as KnowledgeBrain from '@deepseek-ai/dsh-experimental-knowledge-brain'
+import * as ToolImageDescription from '@deepseek-ai/dsh-tool-image-description'
 import { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import type { ImageAttachmentLimits, ImageAttachmentRef, SaveImageAttachment, StoredImageAttachment } from '@deepseek-ai/dsh-attachment'
 import UserQuestionService from '@deepseek-ai/dsh-user-questions'
@@ -632,6 +634,31 @@ const TOOL_PACKAGES: ToolPackage[] = [
       await ctx.plugin(ToolWorkingDirectory)
     },
     note: 'Reads or changes the calling Session directory. Existing shells and processes retain their own directories; origin metadata and permission roots stay fixed.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-experimental-knowledge-brain',
+    dir: 'knowledge-brain',
+    source: 'packages/experimental/knowledge-brain/src/index.ts',
+    requires: ['ctx.tools'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(KnowledgeBrain, { factsDir: 'gen-tool-catalog-no-corpus' })
+    },
+    note: 'Read-only knowledge tools over a caller-configured fact directory. Nothing is delivered unless the model calls a tool.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-image-description',
+    dir: 'tool-image-description',
+    source: 'packages/image-description/tool-image-description/src/index.ts',
+    requires: ['ctx.tools', 'ctx.imageDescription'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      ctx.provide('imageDescription', {
+        describe: () => Promise.reject(new Error('gen-tool-catalog: image description is unavailable during schema harvest')),
+      })
+      await ctx.plugin(ToolImageDescription)
+    },
+    note: 'Reads one attached image as text when the session route cannot accept images; the description seam owns resolution and refusal wording.',
   },
   {
     pkg: '@deepseek-ai/dsh-experimental-tool-worktree',

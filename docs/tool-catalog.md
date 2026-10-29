@@ -44,6 +44,8 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-experimental-tool-agent-team` | `interrupt_agent`, `list_agents`, `send_message`, `spawn_teammate`, `team_task_create`, `team_task_get`, `team_task_list`, `team_task_update`, `wait_agent` | `ctx.tools`, `ctx.systemPrompt`, `ctx.agentTeams`, `an exact live Team member Agent` | `tool/call`, `team/member`, `team/task`, `agent/inbox/spliced`, `user/message on inbox claim`, `tool/result` | - | All nine tools are scoped to implicit Team Leads and durable teammates. The shipped dsh-base bundle keeps the package disabled; the documented Agent Teams profile patch enables it while disabling the legacy continuable-child control names. |
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@deepseek-ai/dsh-tool-working-directory` | `working_directory` | `ctx.tools`, `ctx.workingDirectory` | `tool/call`, `working-directory/change`, `user context for directory changes`, `tool/result` | - | Reads or changes the calling Session directory. Existing shells and processes retain their own directories; origin metadata and permission roots stay fixed. |
+| `@deepseek-ai/dsh-experimental-knowledge-brain` | `knowledge_doubt`, `knowledge_recall`, `knowledge_scan` | `ctx.tools` | `tool/call`, `tool/result` | - | Read-only knowledge tools over a caller-configured fact directory. Nothing is delivered unless the model calls a tool. |
+| `@deepseek-ai/dsh-tool-image-description` | `describe_image` | `ctx.tools`, `ctx.imageDescription` | `tool/call`, `tool/result` | - | Reads one attached image as text when the session route cannot accept images; the description seam owns resolution and refusal wording. |
 | `@deepseek-ai/dsh-experimental-tool-worktree` | `create_worktree` | `ctx.tools`, `ctx.worktrees`, `a calling Agent` | `tool/call`, `Git branch and checkout`, `working-directory/change`, `tool/result` | - | Explicit experimental composition only. Creates a new branch and checkout from a pinned local commit under existing write permissions, then changes the Session directory. Leaving retains the branch and checkout. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-workspace-dependencies` | `load_workspace_dependencies` | `ctx.tools` | `tool/call`, `tool/result` | - | - |
@@ -2631,6 +2633,117 @@ Read the current working directory, or change it with cd. Relative paths use the
 Source: [`packages/session/tool-working-directory/src/index.ts`](../packages/session/tool-working-directory/src/index.ts)
 
 Reads or changes the calling Session directory. Existing shells and processes retain their own directories; origin metadata and permission roots stay fixed.
+
+<a id="deepseek-aidsh-experimental-knowledge-brain"></a>
+
+## `@deepseek-ai/dsh-experimental-knowledge-brain`
+
+### `knowledge_doubt`
+
+Report how much one knowledge item can be trusted: evidence, exceptions, staleness and conflicting items. Use it before relying on an item for a decision.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Fact id returned by knowledge_scan."
+    }
+  },
+  "required": [
+    "id"
+  ]
+}
+```
+
+Source: [`packages/experimental/knowledge-brain/src/index.ts`](../packages/experimental/knowledge-brain/src/index.ts)
+
+### `knowledge_recall`
+
+Return one knowledge item in full: conclusion, applicability, evidence quote and mandatory trust markers. Only recall items the current task actually needs.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Fact id returned by knowledge_scan."
+    }
+  },
+  "required": [
+    "id"
+  ]
+}
+```
+
+Source: [`packages/experimental/knowledge-brain/src/index.ts`](../packages/experimental/knowledge-brain/src/index.ts)
+
+### `knowledge_scan`
+
+Report whether project knowledge exists for a topic, path, symbol or command. Returns a compact index (one line per item) and never item bodies. An empty result is a normal answer.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "What the current task is about, in a few words."
+    },
+    "paths": {
+      "type": "array",
+      "description": "Repo-relative paths the turn touches, when known.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "symbols": {
+      "type": "array",
+      "description": "Identifiers the turn is about, when known.",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
+```
+
+Source: [`packages/experimental/knowledge-brain/src/index.ts`](../packages/experimental/knowledge-brain/src/index.ts)
+
+Read-only knowledge tools over a caller-configured fact directory. Nothing is delivered unless the model calls a tool.
+
+<a id="deepseek-aidsh-tool-image-description"></a>
+
+## `@deepseek-ai/dsh-tool-image-description`
+
+### `describe_image`
+
+Read one attached image as text when your own model cannot accept images. Pass the attachment handle from an image placeholder: the sha256 digest or its leading hex prefix. Returns a description written by a vision-capable model, the model that produced it, and whether your session route or the configured default served it. Read-only: it stores nothing and changes no conversation state.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "attachment": {
+      "type": "string",
+      "description": "Attachment handle from an image placeholder: the sha256 digest or its leading hex prefix."
+    },
+    "prompt": {
+      "type": "string",
+      "description": "What to extract from the image. Omit for a general description."
+    }
+  },
+  "required": [
+    "attachment"
+  ]
+}
+```
+
+Source: [`packages/image-description/tool-image-description/src/index.ts`](../packages/image-description/tool-image-description/src/index.ts)
+
+Reads one attached image as text when the session route cannot accept images; the description seam owns resolution and refusal wording.
 
 <a id="deepseek-aidsh-experimental-tool-worktree"></a>
 

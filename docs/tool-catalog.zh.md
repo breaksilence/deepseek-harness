@@ -48,6 +48,8 @@
 | `@deepseek-ai/dsh-experimental-tool-agent-team` | `interrupt_agent`、`list_agents`、`send_message`、`spawn_teammate`、`team_task_create`、`team_task_get`、`team_task_list`、`team_task_update`、`wait_agent` | `ctx.tools`、`ctx.systemPrompt`、`ctx.agentTeams`、`an exact live Team member Agent` | `tool/call`、`team/member`、`team/task`、`agent/inbox/spliced`、`user/message on inbox claim`、`tool/result` | - | 这 9 个工具限定于隐式 Team Lead 与持久 teammate 作用域。随产品发布的 dsh-base bundle 默认禁用该包；文档中的 Agent Teams profile patch 会启用它，并禁用旧 continuable child 的同名控制工具。 |
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`、`owning Agent session` | `tool/call`、`todo/write`、`tool/result` | - | todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为检查清单。`allowParallelInProgress` 是没有默认值的必填项，因此本目录明确选择 `true`，对应描述允许同时存在多个 `in_progress` 项。选择 `false` 的部署会获得同一工具，但描述会要求只能有 1 个活动任务。 |
 | `@deepseek-ai/dsh-tool-working-directory` | `working_directory` | `ctx.tools`, `ctx.workingDirectory` | `tool/call`, `working-directory/change`, `user context for directory changes`, `tool/result` | - | 读取或改变调用方 Session 的目录。已有 shell 和进程保留自己的目录；原始元数据和权限根目录保持不变。 |
+| `@deepseek-ai/dsh-experimental-knowledge-brain` | `knowledge_doubt`, `knowledge_recall`, `knowledge_scan` | `ctx.tools` | `tool/call`, `tool/result` | - | 只读知识工具，读取调用方配置的事实目录。除非模型主动调用工具，否则不投递任何内容。 |
+| `@deepseek-ai/dsh-tool-image-description` | `describe_image` | `ctx.tools`, `ctx.imageDescription` | `tool/call`, `tool/result` | - | 当 Session 路由无法接受图像时，把一张已附加的图像读成文本；描述 seam 负责解析与拒绝措辞。 |
 | `@deepseek-ai/dsh-experimental-tool-worktree` | `create_worktree` | `ctx.tools`, `ctx.worktrees`, `a calling Agent` | `tool/call`, `Git branch and checkout`, `working-directory/change`, `tool/result` | - | 仅通过显式实验组合加载。在现有写权限下从固定的本地提交创建新分支与检出目录，再改变 Session 工作目录。离开时保留分支与检出目录。 |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-workspace-dependencies` | `load_workspace_dependencies` | `ctx.tools` | `tool/call`, `tool/result` | - | - |
@@ -2639,7 +2641,117 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
 
 读取或改变调用方 Session 的目录。已有 shell 和进程保留自己的目录；原始元数据和权限根目录保持不变。
 
+## `@deepseek-ai/dsh-experimental-knowledge-brain`
+
+### `knowledge_doubt`
+
+说明一条知识可信任到什么程度：证据、例外、时效与声明式冲突。在依据某条知识做决定之前先用它。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Fact id returned by knowledge_scan."
+    }
+  },
+  "required": [
+    "id"
+  ]
+}
+```
+
+来源：[`packages/experimental/knowledge-brain/src/index.ts`](../packages/experimental/knowledge-brain/src/index.ts)
+
+### `knowledge_recall`
+
+完整返回一条知识：结论、适用范围、证据原文与强制信任标记。只召回当前任务真正需要的条目。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Fact id returned by knowledge_scan."
+    }
+  },
+  "required": [
+    "id"
+  ]
+}
+```
+
+来源：[`packages/experimental/knowledge-brain/src/index.ts`](../packages/experimental/knowledge-brain/src/index.ts)
+
+### `knowledge_scan`
+
+说明是否存在与主题、路径、符号或命令相关的项目知识。返回紧凑索引（每条一行），从不返回条目正文。空结果是一个正常答案。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "topic": {
+      "type": "string",
+      "description": "What the current task is about, in a few words."
+    },
+    "paths": {
+      "type": "array",
+      "description": "Repo-relative paths the turn touches, when known.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "symbols": {
+      "type": "array",
+      "description": "Identifiers the turn is about, when known.",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
+```
+
+来源：[`packages/experimental/knowledge-brain/src/index.ts`](../packages/experimental/knowledge-brain/src/index.ts)
+
+只读知识工具，读取调用方配置的事实目录。除非模型主动调用工具，否则不投递任何内容。
+
+<a id="deepseek-aidsh-tool-image-description"></a>
+
+## `@deepseek-ai/dsh-tool-image-description`
+
+### `describe_image`
+
+当你的模型无法接受图像时，把一张已附加的图像读成文本。传入图像占位符里的附件句柄：sha256 摘要或其十六进制前缀。返回具备视觉能力的模型写出的描述、产出该描述的模型，以及它由本 Session 路由还是配置的默认值提供。只读：不存储任何内容，也不改变会话状态。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "attachment": {
+      "type": "string",
+      "description": "Attachment handle from an image placeholder: the sha256 digest or its leading hex prefix."
+    },
+    "prompt": {
+      "type": "string",
+      "description": "What to extract from the image. Omit for a general description."
+    }
+  },
+  "required": [
+    "attachment"
+  ]
+}
+```
+
+来源：[`packages/image-description/tool-image-description/src/index.ts`](../packages/image-description/tool-image-description/src/index.ts)
+
+当 Session 路由无法接受图像时，把一张已附加的图像读成文本；描述 seam 负责解析与拒绝措辞。
+
 <a id="deepseek-aidsh-experimental-tool-worktree"></a>
+
 
 ## `@deepseek-ai/dsh-experimental-tool-worktree`
 

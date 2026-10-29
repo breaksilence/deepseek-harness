@@ -1,0 +1,14 @@
+[
+  {
+    "id": "kb-config-thresholds",
+    "question": "可变阈值应该写进配置还是写死在代码里，改的时候要动哪里？"
+  },
+  {
+    "id": "kb-generated-files",
+    "question": "生成出来的文件能不能直接改，还是必须重新生成？"
+  },
+  {
+    "id": "kb-snapshot-recording",
+    "question": "期望输出变了以后，应该重新录制还是直接改期望文件？"
+  }
+]

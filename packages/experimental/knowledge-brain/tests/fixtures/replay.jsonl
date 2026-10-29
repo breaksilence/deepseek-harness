@@ -1,0 +1,6 @@
+{"paths":["scripts/tools/gen-tool-catalog.ts"]}
+{"paths":["scripts/tools/gen-client-catalog.ts"]}
+{"paths":["packages/core/tools/src/index.ts"]}
+{"paths":["snapshots/session/expected.txt"]}
+{"paths":["docs/architecture.md"]}
+{"paths":["apps/web/src/main.tsx"]}

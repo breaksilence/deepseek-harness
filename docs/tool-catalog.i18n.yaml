@@ -9,8 +9,8 @@
   en: 6cc2cd9ced70bb09
   zh: 1c0e6cb4ba2ed637
 /tool-schema-catalog/tool-package-map:
-  en: e72ad7af437fa362
-  zh: d8f3683a4efe01b0
+  en: 6a16587f1d7ba534
+  zh: 45f7f2e8b9d482e6
 /tool-schema-catalog/deepseek-ai-dsh-plugin-manager:
   en: e0143916bb634762
   zh: e0143916bb634762
@@ -300,8 +300,26 @@
   en: 1bdc4627ca4fff29
   zh: 1bdc4627ca4fff29
 /tool-schema-catalog/deepseek-ai-dsh-tool-working-directory/working-directory:
-  en: ac1944f6035b8b50
-  zh: f5fc005c13185211
+  en: 8acfb12422ac5cd2
+  zh: 30ae5d0ca0f7be02
+/tool-schema-catalog/deepseek-ai-dsh-experimental-knowledge-brain:
+  en: 9280fcd939d79a9b
+  zh: 9280fcd939d79a9b
+/tool-schema-catalog/deepseek-ai-dsh-experimental-knowledge-brain/knowledge-doubt:
+  en: a3c6aa426cfc3d91
+  zh: 0c961f2e62084d3d
+/tool-schema-catalog/deepseek-ai-dsh-experimental-knowledge-brain/knowledge-recall:
+  en: 19280efdd03bf048
+  zh: 14de8a7b0ae1018a
+/tool-schema-catalog/deepseek-ai-dsh-experimental-knowledge-brain/knowledge-scan:
+  en: 900a78951a17c5b2
+  zh: e03b78a8134c26c4
+/tool-schema-catalog/deepseek-ai-dsh-tool-image-description:
+  en: 3dab5ef1c37c78a4
+  zh: 3dab5ef1c37c78a4
+/tool-schema-catalog/deepseek-ai-dsh-tool-image-description/describe-image:
+  en: 9bda7892d3a887ab
+  zh: b971ec3ec7d6e2c4
 /tool-schema-catalog/deepseek-ai-dsh-experimental-tool-worktree:
   en: d5f5679abe86e316
   zh: d5f5679abe86e316
