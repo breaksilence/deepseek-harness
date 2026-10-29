@@ -9,12 +9,17 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { type Fact, parseFactDocument } from './facts.ts'
 
+/** Directory name reserved for facts a reviewer rejected; its documents never join the corpus. */
+const REJECTED_DIRECTORY = 'rejected'
+
 async function collect(dir: string, acc: string[]): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true })
   for (const entry of entries) {
     const path = join(dir, entry.name)
-    if (entry.isDirectory()) await collect(path, acc)
-    else if (entry.name.endsWith('.md')) acc.push(path)
+    if (entry.isDirectory()) {
+      if (entry.name === REJECTED_DIRECTORY) continue
+      await collect(path, acc)
+    } else if (entry.name.endsWith('.md')) acc.push(path)
   }
   return acc
 }

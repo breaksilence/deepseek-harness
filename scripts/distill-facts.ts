@@ -11,6 +11,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseFactDocument, type Fact } from '../packages/experimental/knowledge-brain/src/facts.ts'
+import { tokenize } from '../packages/experimental/knowledge-brain/src/tokens.ts'
 
 /** One recorded turn: the paths it touched and the text a candidate may be distilled from. */
 export interface DistillTurn {
@@ -27,6 +28,8 @@ export interface DistillOptions {
   readonly maxPerTurn?: number
   /** Minimum confidence a candidate must declare. */
   readonly minConfidence?: number
+  /** Conclusions already rejected by a reviewer; matching proposals are dropped. */
+  readonly skipConclusions?: readonly string[]
 }
 
 /** One distillation result, including why a proposal was dropped. */
@@ -64,6 +67,19 @@ export async function distillCandidates(
 ): Promise<DistillOutcome> {
   const maxPerTurn = options.maxPerTurn ?? 2
   const minConfidence = options.minConfidence ?? 0.5
+  // Exact and near-duplicate matching: a model usually restates a rejected claim differently.
+  const skip = (options.skipConclusions ?? []).map(text => new Set(tokenize(text)))
+  const nearDuplicate = (conclusion: string): boolean => {
+    const tokens = new Set(tokenize(conclusion))
+    if (tokens.size === 0) return false
+    for (const rejected of skip) {
+      let shared = 0
+      for (const token of tokens) if (rejected.has(token)) shared += 1
+      const smaller = Math.min(tokens.size, rejected.size)
+      if (smaller > 0 && shared / smaller >= 0.6) return true
+    }
+    return false
+  }
   const accepted: Fact[] = []
   const rejected: { conclusion: string; reason: string }[] = []
   let sequence = 0
@@ -101,6 +117,10 @@ export async function distillCandidates(
       const confidence = typeof record.confidence === 'number' ? record.confidence : Number.NaN
       if (conclusion.length === 0) {
         rejected.push({ conclusion: '(empty)', reason: 'missing conclusion' })
+        continue
+      }
+      if (nearDuplicate(conclusion)) {
+        rejected.push({ conclusion, reason: 'already rejected by a reviewer' })
         continue
       }
       // Falsifiability: the quote must exist in the turn, or the claim has no support.
@@ -193,7 +213,14 @@ async function main(): Promise<void> {
     const message = body.choices?.[0]?.message ?? {}
     return message.content ?? message.reasoning_content ?? ''
   }
-  const outcome = await distillCandidates(turns, ask)
+  const rejectedLog = flag(argv, '--skip-rejected', '')
+  const skipConclusions = rejectedLog.length === 0
+    ? []
+    : read(rejectedLog, 'utf8')
+      .split('\n')
+      .filter(line => line.trim().length > 0)
+      .map(line => (JSON.parse(line) as { conclusion?: string }).conclusion ?? '')
+  const outcome = await distillCandidates(turns, ask, { skipConclusions })
   const written = writeCandidates(outcome.accepted, outDir)
   process.stdout.write(`distill-facts: ${outcome.accepted.length} accepted, ${outcome.rejected.length} rejected, ${written.length} written to ${outDir}\n`)
   for (const rejection of outcome.rejected) {

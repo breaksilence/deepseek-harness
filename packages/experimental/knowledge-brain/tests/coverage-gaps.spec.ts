@@ -1,6 +1,6 @@
 /** Coverage-completing cases for optional fields, scoring paths, and rendering branches. */
 
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -41,6 +41,21 @@ function fact(overrides: Partial<Fact> = {}): Fact {
     ...overrides,
   }
 }
+
+describe('archived rejections', () => {
+  it('does not load documents under rejected/', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dsh-kb-rejected-'))
+    try {
+      await mkdir(join(dir, 'rejected'), { recursive: true })
+      await writeFile(join(dir, 'kept.md'), `---\n${JSON.stringify(base)}\n---\nbody\n`, 'utf8')
+      await writeFile(join(dir, 'rejected', 'gone.md'), `---\n${JSON.stringify({ ...base, id: 'gone' })}\n---\nbody\n`, 'utf8')
+      const facts = await loadFacts(dir)
+      expect(facts.map(fact => fact.id)).toEqual(['kb-1'])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})
 
 describe('fact validation defaults', () => {
   it('defaults every absent optional field', () => {

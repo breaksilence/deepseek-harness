@@ -1,13 +1,14 @@
 /** Reviewer tooling: confirming candidates, and drafting conflict pairs for a human read. */
 
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { Fact } from '../packages/experimental/knowledge-brain/src/facts.ts'
 import { loadFacts } from '../packages/experimental/knowledge-brain/src/load.ts'
-import { confirmFacts, renderFact, writeFacts } from './confirm-facts.ts'
+import { archiveRejections, confirmFacts, renderFact, writeFacts } from './confirm-facts.ts'
 import { draftConflicts, renderReport } from './draft-conflicts.ts'
+import { distillCandidates } from './distill-facts.ts'
 
 const NOW = 1_800_000_000_000
 
@@ -40,6 +41,23 @@ describe('confirmFacts', () => {
     expect(updated[0]).toMatchObject({ id: 'c1', trust: 'user-confirmed', updatedAt: NOW + 1 })
   })
 
+  it('archives a rejected candidate outside the corpus and logs why', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'dsh-reject-'))
+    try {
+      const candidate = fact({ id: 'r1', origin: 'r1.md' })
+      writeFacts([candidate], directory)
+      const archive = archiveRejections([candidate], directory, 'claim was wrong', NOW)
+
+      expect(archive.archived).toEqual(['r1'])
+      expect(readdirSync(join(directory, 'rejected'))).toEqual(['r1.md'])
+      const logged = readFileSync(archive.logPath, 'utf8').trim().split('\n').map(line => JSON.parse(line) as { id: string; reason: string })
+      expect(logged).toEqual([{ id: 'r1', conclusion: candidate.conclusion, reason: 'claim was wrong', at: NOW }])
+      expect(await loadFacts(directory)).toHaveLength(0)
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
   it('round-trips a confirmed fact through the document contract', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'dsh-confirm-'))
     try {
@@ -55,6 +73,28 @@ describe('confirmFacts', () => {
     } finally {
       rmSync(directory, { recursive: true, force: true })
     }
+  })
+})
+
+describe('distillCandidates with a rejection log', () => {
+  it('drops a proposal a reviewer already rejected', async () => {
+    const turn = { paths: ['services/billing/handlers/charge.py'], text: '重试必须复用同一个 Idempotency-Key。' }
+    const reply = async (): Promise<string> => JSON.stringify([
+      { conclusion: '重试必须复用同一个 Idempotency-Key', evidence: '重试必须复用同一个 Idempotency-Key', confidence: 0.9 },
+    ])
+    const kept = await distillCandidates([turn], reply)
+    expect(kept.accepted).toHaveLength(1)
+
+    const skipped = await distillCandidates([turn], reply, { skipConclusions: ['重试必须复用同一个 Idempotency-Key'] })
+    expect(skipped.accepted).toHaveLength(0)
+    expect(skipped.rejected[0]?.reason).toBe('already rejected by a reviewer')
+
+    // A reviewer rejection also catches a paraphrased restatement of the same claim.
+    const paraphrase = await distillCandidates([turn], async () => JSON.stringify([
+      { conclusion: '重试时要复用同一个 Idempotency-Key', evidence: '重试必须复用同一个 Idempotency-Key', confidence: 0.9 },
+    ]), { skipConclusions: ['重试必须复用同一个 Idempotency-Key 以避免重复扣款'] })
+    expect(paraphrase.accepted).toHaveLength(0)
+    expect(paraphrase.rejected[0]?.reason).toBe('already rejected by a reviewer')
   })
 })
 
