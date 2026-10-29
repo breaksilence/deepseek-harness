@@ -16,6 +16,8 @@ const measurement: Measurement = {
   retrievalAccuracy: 0.939,
   pipelineParaphrase: 0.909,
   retrievalParaphrase: 0.909,
+  candidateYield: null,
+  distillDropRate: null,
 }
 
 const baseline: Baseline = { ...measurement, tolerance: 0.05, recordedAt: '2026-10-29T13:04:34.041Z' }
@@ -66,6 +68,17 @@ describe('compare', () => {
   it('rejects any shrink in the fact or promoted counts', () => {
     expect(compare(baseline, { ...measurement, facts: 32 })[0]).toMatchObject({ field: 'facts' })
     expect(compare(baseline, { ...measurement, promoted: 20 })[0]).toMatchObject({ field: 'promoted' })
+  })
+
+  it('compares distillation rates when both runs supplied a report', () => {
+    const withReport: Measurement = { ...measurement, candidateYield: 1.2, distillDropRate: 0.25 }
+    const recorded: Baseline = { ...withReport, tolerance: 0.05, recordedAt: baseline.recordedAt }
+    // The tolerance is absolute, so a yield may fall by it (1.20 -> 1.16) but not more.
+    expect(compare(recorded, { ...withReport, candidateYield: 1.16 })).toEqual([])
+    expect(compare(recorded, { ...withReport, candidateYield: 0.9 })[0]).toMatchObject({ field: 'candidateYield' })
+    expect(compare(recorded, { ...withReport, distillDropRate: 0.1 })[0]).toMatchObject({ field: 'distillDropRate' })
+    // A run without a report cannot be compared against one that had it.
+    expect(compare(recorded, { ...measurement, candidateYield: null })).toEqual([])
   })
 
   it('records a baseline document and round-trips it', () => {

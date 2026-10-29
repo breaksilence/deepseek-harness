@@ -116,6 +116,8 @@ In that sequence distillation proposes, a reviewer confirms or rejects, later di
 
 ### Drift gate
 
+`distill-facts --report <path>` writes the run statistics a reviewer has to keep up with: candidates per turn, the share of proposals dropped, and why. `pnpm run verify-knowledge-baseline -- --distill-report <path>` records those two rates alongside the corpus measurements; without a report they stay null, so the committed baseline never depends on a model call.
+
 `pnpm run verify-knowledge-baseline` re-measures the frozen corpus and compares against `tests/fixtures/baseline.json`: fact and promoted counts may not shrink at all, and rates may drift down by the recorded tolerance (0.05) only. A regression prints which number fell from what to what instead of relying on someone remembering the old value.
 
 -----

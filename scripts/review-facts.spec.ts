@@ -8,7 +8,7 @@ import type { Fact } from '../packages/experimental/knowledge-brain/src/facts.ts
 import { loadFacts } from '../packages/experimental/knowledge-brain/src/load.ts'
 import { archiveRejections, confirmFacts, renderFact, writeFacts } from './confirm-facts.ts'
 import { draftConflicts, renderReport } from './draft-conflicts.ts'
-import { buildPrompt, distillCandidates } from './distill-facts.ts'
+import { buildPrompt, distillCandidates, statisticsOf } from './distill-facts.ts'
 
 const NOW = 1_800_000_000_000
 
@@ -73,6 +73,43 @@ describe('confirmFacts', () => {
     } finally {
       rmSync(directory, { recursive: true, force: true })
     }
+  })
+})
+
+describe('statisticsOf', () => {
+  it('reports yield, drop rate, and the reason histogram', () => {
+    const stats = statisticsOf(4, 3, [
+      { reason: 'evidence quote not found in the turn' },
+      { reason: 'evidence quote not found in the turn' },
+      { reason: 'already rejected by a reviewer' },
+    ])
+    expect(stats).toEqual({
+      turns: 4,
+      accepted: 3,
+      rejected: 3,
+      yieldPerTurn: 0.75,
+      dropRate: 0.5,
+      byReason: {
+        'evidence quote not found in the turn': 2,
+        'already rejected by a reviewer': 1,
+      },
+    })
+  })
+
+  it('avoids dividing by zero on an empty run', () => {
+    expect(statisticsOf(0, 0, [])).toMatchObject({ yieldPerTurn: 0, dropRate: 0 })
+  })
+
+  it('rides along on a real run', async () => {
+    const turn = { paths: ['services/billing/handlers/charge.py'], text: '重试必须复用同一个 Idempotency-Key。' }
+    const reply = async (): Promise<string> => JSON.stringify([
+      { conclusion: '重试必须复用同一个 Idempotency-Key', evidence: '重试必须复用同一个 Idempotency-Key', confidence: 0.9 },
+      { conclusion: '无引句的结论', evidence: '原文里没有这句', confidence: 0.9 },
+    ])
+    const outcome = await distillCandidates([turn], reply)
+    expect(outcome.stats.turns).toBe(1)
+    expect(outcome.stats.accepted).toBe(1)
+    expect(outcome.stats.byReason).toMatchObject({ 'evidence quote not found in the turn': 1 })
   })
 })
 

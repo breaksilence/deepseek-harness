@@ -26,6 +26,10 @@ export interface Baseline {
   readonly pipelineParaphrase: number
   /** Paraphrased questions over every fact. */
   readonly retrievalParaphrase: number
+  /** Candidates accepted per turn in the recorded distillation run, when one is supplied. */
+  readonly candidateYield: number | null
+  /** Share of proposals a distillation run dropped, when one is supplied. */
+  readonly distillDropRate: number | null
   /** Allowed downward drift before `--check` fails. */
   readonly tolerance: number
   /** Recorded when the baseline was written. */
@@ -86,6 +90,8 @@ export function measure(options: {
   readonly questionsPath: string
   readonly paraphrasedPath: string
   readonly minTopicTokens?: number
+  /** Distillation run report; its two rates are recorded but never recomputed here. */
+  readonly distillReportPath?: string
 }): Measurement {
   const facts = readFacts(options.factsDir)
   const replay = readFileSync(options.replayPath, 'utf8').split('\n').filter(line => line.trim().length > 0)
@@ -97,6 +103,16 @@ export function measure(options: {
   const minTopicTokens = options.minTopicTokens ?? 2
   const questions = loadQuestions(options.questionsPath)
   const paraphrased = loadQuestions(options.paraphrasedPath)
+  let candidateYield: number | null = null
+  let distillDropRate: number | null = null
+  if (options.distillReportPath !== undefined && options.distillReportPath.length > 0) {
+    const report = JSON.parse(readFileSync(options.distillReportPath, 'utf8')) as {
+      yieldPerTurn?: number
+      dropRate?: number
+    }
+    candidateYield = typeof report.yieldPerTurn === 'number' ? report.yieldPerTurn : null
+    distillDropRate = typeof report.dropRate === 'number' ? report.dropRate : null
+  }
   return {
     facts: facts.length,
     promoted: promoted.length,
@@ -105,6 +121,8 @@ export function measure(options: {
     retrievalAccuracy: accuracyOf(facts, questions, minTopicTokens),
     pipelineParaphrase: accuracyOf(promoted, paraphrased, minTopicTokens),
     retrievalParaphrase: accuracyOf(facts, paraphrased, minTopicTokens),
+    candidateYield,
+    distillDropRate,
   }
 }
 
@@ -119,12 +137,17 @@ export function compare(baseline: Baseline, current: Measurement): readonly Drif
   const numeric: readonly (keyof Measurement)[] = [
     'facts', 'promoted', 'coverage',
     'pipelineAccuracy', 'retrievalAccuracy', 'pipelineParaphrase', 'retrievalParaphrase',
+    'candidateYield', 'distillDropRate',
   ]
   for (const field of numeric) {
+    const recorded = baseline[field]
+    const observed = current[field]
+    // A distillation rate exists only when both runs supplied a report.
+    if (recorded === null || observed === null) continue
     // Counts must not shrink at all; rates may drift down by the recorded tolerance.
     const allowed = field === 'facts' || field === 'promoted' ? 0 : baseline.tolerance
-    if (current[field] < baseline[field] - allowed) {
-      drifts.push({ field, baseline: baseline[field], current: current[field] })
+    if (observed < recorded - allowed) {
+      drifts.push({ field, baseline: recorded, current: observed })
     }
   }
   return drifts
@@ -158,6 +181,7 @@ function main(): void {
     questionsPath: `${fixtures}/questions33.json`,
     paraphrasedPath: `${fixtures}/questions33-paraphrased.json`,
     minTopicTokens: Number(flag(argv, '--min-topic-tokens', '2')),
+    distillReportPath: flag(argv, '--distill-report', ''),
   }
   const current = measure(options)
 

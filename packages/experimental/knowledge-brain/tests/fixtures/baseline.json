@@ -6,6 +6,8 @@
   "retrievalAccuracy": 0.939,
   "pipelineParaphrase": 0.909,
   "retrievalParaphrase": 0.909,
+  "candidateYield": null,
+  "distillDropRate": null,
   "tolerance": 0.05,
-  "recordedAt": "2026-10-29T13:18:06.806Z"
+  "recordedAt": "2026-10-29T23:25:41.197Z"
 }

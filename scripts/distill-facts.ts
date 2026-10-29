@@ -34,10 +34,24 @@ export interface DistillOptions {
   readonly maxRejectedExamples?: number
 }
 
+/** Machine-readable statistics for one distillation run. */
+export interface DistillStats {
+  readonly turns: number
+  readonly accepted: number
+  readonly rejected: number
+  /** Candidates accepted per turn, the yield a reviewer has to keep up with. */
+  readonly yieldPerTurn: number
+  /** Share of proposals a reviewer never sees because they were dropped. */
+  readonly dropRate: number
+  /** Rejection reasons, count per reason. */
+  readonly byReason: Readonly<Record<string, number>>
+}
+
 /** One distillation result, including why a proposal was dropped. */
 export interface DistillOutcome {
   readonly accepted: readonly Fact[]
   readonly rejected: readonly { readonly conclusion: string; readonly reason: string }[]
+  readonly stats: DistillStats
 }
 
 /**
@@ -182,7 +196,32 @@ export async function distillCandidates(
     }
   }
 
-  return { accepted, rejected }
+  return { accepted, rejected, stats: statisticsOf(turns.length, accepted.length, rejected) }
+}
+
+/**
+ * Summarize one run.
+ * @param turns - turns the run read.
+ * @param accepted - candidates the run kept.
+ * @param rejected - proposals the run dropped.
+ * @returns the run statistics.
+ */
+export function statisticsOf(
+  turns: number,
+  accepted: number,
+  rejected: readonly { readonly reason: string }[],
+): DistillStats {
+  const byReason: Record<string, number> = {}
+  for (const entry of rejected) byReason[entry.reason] = (byReason[entry.reason] ?? 0) + 1
+  const proposals = accepted + rejected.length
+  return {
+    turns,
+    accepted,
+    rejected: rejected.length,
+    yieldPerTurn: turns === 0 ? 0 : Number((accepted / turns).toFixed(3)),
+    dropRate: proposals === 0 ? 0 : Number((rejected.length / proposals).toFixed(3)),
+    byReason,
+  }
 }
 
 /**
@@ -244,6 +283,8 @@ async function main(): Promise<void> {
       .map(line => (JSON.parse(line) as { conclusion?: string }).conclusion ?? '')
   const outcome = await distillCandidates(turns, ask, { skipConclusions })
   const written = writeCandidates(outcome.accepted, outDir)
+  const reportPath = flag(argv, '--report', '')
+  if (reportPath.length > 0) writeFileSync(reportPath, `${JSON.stringify(outcome.stats, null, 2)}\n`, 'utf8')
   process.stdout.write(`distill-facts: ${outcome.accepted.length} accepted, ${outcome.rejected.length} rejected, ${written.length} written to ${outDir}\n`)
   for (const rejection of outcome.rejected) {
     process.stdout.write(`  rejected: ${rejection.conclusion} — ${rejection.reason}\n`)
