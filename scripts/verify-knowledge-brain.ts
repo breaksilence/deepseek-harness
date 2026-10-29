@@ -10,6 +10,9 @@
  * Override any input for a real corpus:
  *   pnpm run verify-knowledge-brain -- --facts <dir> --replay <jsonl> --gold <json>
  *
+ * Thresholds are flags (`--min-question`, `--min-paraphrase`) so a stricter or looser corpus
+ * records its own baseline instead of inheriting the fixture's.
+ *
  * With `--questions <json>` it also measures question-to-fact accuracy: one generated question per
  * promoted fact, asked with that fact's own scope path, must return the same fact.
  */
@@ -113,6 +116,8 @@ function main(argv: readonly string[]): void {
     return { hit: answers.filter(Boolean).length, total: answers.length }
   }
 
+  const minQuestion = Number(flag(argv, '--min-question', '0.8'))
+  const minParaphrase = Number(flag(argv, '--min-paraphrase', '0.85'))
   const questionHit = measureQuestions(flag(argv, '--questions', ''))
   if (questionHit !== undefined) {
     process.stdout.write(`question accuracy: ${ratio(questionHit.hit, questionHit.total)} (${questionHit.hit}/${questionHit.total})\n`)
@@ -128,10 +133,10 @@ function main(argv: readonly string[]): void {
       ? 'no turn received knowledge'
       : report.coverage === 0
         ? 'coverage is zero'
-        : questionHit !== undefined && questionHit.hit / questionHit.total < 0.8
-          ? 'question accuracy below 80%'
-          : paraphraseHit !== undefined && paraphraseHit.hit / paraphraseHit.total < 0.85
-            ? 'paraphrase accuracy below 85%'
+        : questionHit !== undefined && questionHit.hit / questionHit.total < minQuestion
+          ? `question accuracy below ${minQuestion}`
+          : paraphraseHit !== undefined && paraphraseHit.hit / paraphraseHit.total < minParaphrase
+            ? `paraphrase accuracy below ${minParaphrase}`
             : undefined
   if (failure !== undefined) {
     process.stderr.write(`verify-knowledge-brain: ${failure}\n`)
