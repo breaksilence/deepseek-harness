@@ -8940,6 +8940,16 @@ importers:
         specifier: workspace:*
         version: link:../../core/system-prompt
 
+  packages/experimental/knowledge-brain-profile:
+    dependencies:
+      '@deepseek-ai/dsh-experimental-knowledge-brain':
+        specifier: workspace:*
+        version: link:../knowledge-brain
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:~
+        version: link:../../../vendor/cordis
+
   packages/experimental/plugin-market-bundle:
     dependencies:
       '@deepseek-ai/dsh-client-ui-plugin-market':

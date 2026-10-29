@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/experimental/knowledge-brain-profile/README.md
+/deepseek-ai-dsh-experimental-knowledge-brain-profile:
+  en: 4b9db43e7a8e061c
+  zh: c9b8fefb28f141b0
+/deepseek-ai-dsh-experimental-knowledge-brain-profile/summary:
+  en: ceeeee9ea1450152
+  zh: eab6c62f3bce7974
+/deepseek-ai-dsh-experimental-knowledge-brain-profile/what-it-configures:
+  en: 949cf2c341e18b75
+  zh: c3f8df7a71e3419e
+/deepseek-ai-dsh-experimental-knowledge-brain-profile/model-experience:
+  en: d1401269e50e4830
+  zh: c2cc839dff50e788
+/deepseek-ai-dsh-experimental-knowledge-brain-profile/known-limitations-and-deferred-work:
+  en: 3b0d0c086e1686ba
+  zh: cf40246309096d8f

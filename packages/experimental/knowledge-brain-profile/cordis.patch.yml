@@ -1,0 +1,13 @@
+# Experimental knowledge bundle: mounts the knowledge-brain plugin with a facts directory.
+# The plugin stays inert until a model calls one of its tools, so this layer changes no request
+# until something asks. Point `factsDir` at a directory of fact documents built by the promotion
+# script.
+
+- insert:
+    - id: knowledge-brain
+      name: '@deepseek-ai/dsh-experimental-knowledge-brain'
+      config:
+        factsDir: ./.dsh/knowledge
+        floor: 5
+        maxScan: 2
+        minTopicTokens: 2
