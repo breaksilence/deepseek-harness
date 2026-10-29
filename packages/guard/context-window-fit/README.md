@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-guard-context-window-fit` when a session may outgrow its route — most visibly after switching from a large-window model to a small one, and earlier when an adapter declares a stale window. The guard reads occupancy from the token meter and capacity from the resolved model route; when the history does not fit, it asks the compaction service for one pass and re-measures. A history that still cannot fit is annotated with the shortfall and the ways forward (compact again, switch back to a larger window, start a new session). A route that declares no capacity is never judged, because guessing a window would invent failures.
+Use `dsh-guard-context-window-fit` when a session may outgrow its route: most visibly after switching from a large-window model to a small one, and earlier when an adapter declares a stale window. The guard reads occupancy from the token meter and capacity from the resolved route; when the history does not fit, it asks compaction for one pass and re-measures. A history that still cannot fit is annotated with the shortfall and the ways forward. A route that declares no capacity is never judged, because guessing a window would invent failures.
 
 ## Table of Contents
 

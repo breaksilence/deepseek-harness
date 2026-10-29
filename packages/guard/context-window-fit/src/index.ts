@@ -94,7 +94,7 @@ export function windowFit(
  * @param assumed - whether the capacity came from configuration rather than the route.
  * @returns one user message carrying the explanation.
  */
-export function overflowNotice(occupiedTokens: number, contextWindow: number, assumed = false) {
+export function overflowNotice(occupiedTokens: number, contextWindow: number, assumed = false): UserMessage {
   return createUserMessage({
     content: [{
       type: 'text',
@@ -125,7 +125,7 @@ export function pressureNotice(
   contextWindow: number,
   reserveTokens: number,
   assumed = false,
-) {
+): UserMessage {
   return createUserMessage({
     content: [{
       type: 'text',

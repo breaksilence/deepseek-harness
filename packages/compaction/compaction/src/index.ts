@@ -181,6 +181,7 @@ export abstract class CompactionEngine extends Service {
    * @param end - last surface seq, inclusive.
    * @param agent - context whose session is mutated and whose routing options guide summarization.
    * @param signal - optional cancellation; model-backed implementations must forward it.
+   * @param options - optional trigger describing why the region was compacted.
    * @throws when compaction is active or the range is missing, reversed, or unbalanced.
    * @returns the appended event seqs, summary, replaced range, and token accounting.
    */
