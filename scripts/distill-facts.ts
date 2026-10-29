@@ -30,6 +30,8 @@ export interface DistillOptions {
   readonly minConfidence?: number
   /** Conclusions already rejected by a reviewer; matching proposals are dropped. */
   readonly skipConclusions?: readonly string[]
+  /** Cap on how many rejected conclusions are quoted back to the model as negative examples. */
+  readonly maxRejectedExamples?: number
 }
 
 /** One distillation result, including why a proposal was dropped. */
@@ -38,16 +40,27 @@ export interface DistillOutcome {
   readonly rejected: readonly { readonly conclusion: string; readonly reason: string }[]
 }
 
-const PROMPT = (turn: DistillTurn): string => `下面是一次开发会话的片段。请提取"以后还想知道的项目知识"，每条包含：
+/**
+ * Build the distillation prompt for one turn.
+ * @param turn - recorded turn.
+ * @param rejectedExamples - conclusions a reviewer already rejected, shown so the model does not restate them.
+ * @returns the prompt text.
+ */
+export function buildPrompt(turn: DistillTurn, rejectedExamples: readonly string[] = []): string {
+  const avoided = rejectedExamples.length === 0
+    ? ''
+    : `\n评审人已经拒绝过下面这些结论，不要用同样的意思重复提出：\n${rejectedExamples.map(text => `- ${text}`).join('\n')}\n`
+  return `下面是一次开发会话的片段。请提取"以后还想知道的项目知识"，每条包含：
 - conclusion：不超过 60 字的结论
 - evidence：必须从下面原文里**逐字摘出**的一句话
 - confidence：0 到 1
 
 只输出 JSON 数组，没有可提炼的内容就输出 []。
-
+${avoided}
 涉及文件：${turn.paths.join(', ') || '(无)'}
 原文：
 ${turn.text}`
+}
 
 function frontMatter(fact: Record<string, unknown>): string {
   return `---\n${JSON.stringify(fact)}\n---\n\n${String(fact.conclusion)}\n`
@@ -68,7 +81,9 @@ export async function distillCandidates(
   const maxPerTurn = options.maxPerTurn ?? 2
   const minConfidence = options.minConfidence ?? 0.5
   // Exact and near-duplicate matching: a model usually restates a rejected claim differently.
-  const skip = (options.skipConclusions ?? []).map(text => new Set(tokenize(text)))
+  const rejectedConclusions = options.skipConclusions ?? []
+  const rejectedExamples = rejectedConclusions.slice(0, options.maxRejectedExamples ?? 8)
+  const skip = rejectedConclusions.map(text => new Set(tokenize(text)))
   const nearDuplicate = (conclusion: string): boolean => {
     const tokens = new Set(tokenize(conclusion))
     if (tokens.size === 0) return false
@@ -85,7 +100,7 @@ export async function distillCandidates(
   let sequence = 0
 
   for (const turn of turns) {
-    const reply = await ask(PROMPT(turn))
+    const reply = await ask(buildPrompt(turn, rejectedExamples))
     const start = reply.indexOf('[')
     const end = reply.lastIndexOf(']')
     if (start < 0 || end <= start) {

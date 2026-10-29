@@ -8,7 +8,7 @@ import type { Fact } from '../packages/experimental/knowledge-brain/src/facts.ts
 import { loadFacts } from '../packages/experimental/knowledge-brain/src/load.ts'
 import { archiveRejections, confirmFacts, renderFact, writeFacts } from './confirm-facts.ts'
 import { draftConflicts, renderReport } from './draft-conflicts.ts'
-import { distillCandidates } from './distill-facts.ts'
+import { buildPrompt, distillCandidates } from './distill-facts.ts'
 
 const NOW = 1_800_000_000_000
 
@@ -73,6 +73,41 @@ describe('confirmFacts', () => {
     } finally {
       rmSync(directory, { recursive: true, force: true })
     }
+  })
+})
+
+describe('buildPrompt', () => {
+  const turn = { paths: ['services/billing/handlers/charge.py'], text: '重试必须复用同一个 Idempotency-Key。' }
+
+  it('names the file and quotes the turn', () => {
+    const prompt = buildPrompt(turn)
+    expect(prompt).toContain('services/billing/handlers/charge.py')
+    expect(prompt).toContain(turn.text)
+    expect(prompt).not.toContain('评审人已经拒绝过')
+  })
+
+  it('lists rejected conclusions as negative examples, capped', () => {
+    const examples = Array.from({ length: 10 }, (_value, index) => `被拒结论-${index}`)
+    const prompt = buildPrompt(turn, examples.slice(0, 3))
+    expect(prompt).toContain('评审人已经拒绝过')
+    expect(prompt).toContain('被拒结论-0')
+    expect(prompt).not.toContain('被拒结论-5')
+  })
+
+  it('feeds the capped examples into the model call', async () => {
+    const prompts: string[] = []
+    const ask = async (prompt: string): Promise<string> => {
+      prompts.push(prompt)
+      return '[]'
+    }
+    await distillCandidates([turn], ask, {
+      skipConclusions: ['被拒一', '被拒二', '被拒三'],
+      maxRejectedExamples: 2,
+    })
+    expect(prompts).toHaveLength(1)
+    expect(prompts[0]).toContain('被拒一')
+    expect(prompts[0]).toContain('被拒二')
+    expect(prompts[0]).not.toContain('被拒三')
   })
 })
 
