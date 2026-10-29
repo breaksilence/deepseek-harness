@@ -111,6 +111,35 @@ describe('buildPrompt', () => {
   })
 })
 
+describe('in-turn deduplication', () => {
+  it('drops a near-duplicate of a proposal accepted earlier in the same reply', async () => {
+    const turn = { paths: ['services/billing/handlers/charge.py'], text: '重试必须复用同一个 Idempotency-Key，避免重复扣款。' }
+    const reply = async (): Promise<string> => JSON.stringify([
+      { conclusion: '重试必须复用同一个 Idempotency-Key', evidence: '重试必须复用同一个 Idempotency-Key', confidence: 0.9 },
+      { conclusion: '重试时要复用同一个 Idempotency-Key', evidence: '避免重复扣款', confidence: 0.8 },
+      { conclusion: '汇率必须从网关读取', evidence: '避免重复扣款', confidence: 0.7 },
+    ])
+    const outcome = await distillCandidates([turn], reply, { maxPerTurn: 5 })
+    expect(outcome.accepted.map(fact => fact.conclusion)).toEqual([
+      '重试必须复用同一个 Idempotency-Key',
+      '汇率必须从网关读取',
+    ])
+    expect(outcome.rejected[0]?.reason).toBe('duplicates an accepted proposal in the same turn')
+  })
+
+  it('keeps a vague pointer to an accepted proposal: overlap alone cannot see it', async () => {
+    const turn = { paths: ['services/billing/handlers/charge.py'], text: '重试必须复用同一个 Idempotency-Key，避免重复扣款。' }
+    const reply = async (): Promise<string> => JSON.stringify([
+      { conclusion: '给 charge 加重试时必须复用同一个 Idempotency-Key，避免客户端重放导致重复扣款', evidence: '重试必须复用同一个 Idempotency-Key', confidence: 0.9 },
+      { conclusion: 'charge 重试复用 Idempotency-Key 的规则已写入评审清单', evidence: '避免重复扣款', confidence: 0.8 },
+    ])
+    const outcome = await distillCandidates([turn], reply, { maxPerTurn: 5 })
+    // Documented limitation: a short reference to a longer claim shares too few tokens to merge.
+    expect(outcome.accepted).toHaveLength(2)
+    expect(outcome.rejected).toHaveLength(0)
+  })
+})
+
 describe('distillCandidates with a rejection log', () => {
   it('drops a proposal a reviewer already rejected', async () => {
     const turn = { paths: ['services/billing/handlers/charge.py'], text: '重试必须复用同一个 Idempotency-Key。' }

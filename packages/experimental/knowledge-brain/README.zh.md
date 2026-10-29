@@ -124,7 +124,7 @@ pnpm run distill-facts -- --turns turns.jsonl --out candidates --skip-rejected c
 pnpm exec tsx scripts/draft-conflicts.ts --facts candidates --out conflict-report.md
 ```
 
-上面几条命令的顺序是：蒸馏提议，评审人确认或拒绝，之后的蒸馏跳过已拒结论，冲突草案始终只是提议。`rejected/` 是保留目录名：加载器会跳过它，所以被拒的结论即使文档还留在树里也进不了语料。确认只改 `trust` 与 `updatedAt`，结论与证据永不重写。
+上面几条命令的顺序是：蒸馏提议，评审人确认或拒绝，之后的蒸馏跳过已拒结论，冲突草案始终只是提议。蒸馏会丢弃同一回复里对已接受结论的重述，也会丢弃对已拒结论的重述。两者都按词表比较，所以"用一句话回指长句"（如"上面那条已经写进清单了"）不会被合并；这类候选随后会被晋升门按覆盖冗余拒掉——语料仍然干净，代价是它要多走一次评审。`rejected/` 是保留目录名：加载器会跳过它，所以被拒的结论即使文档还留在树里也进不了语料。确认只改 `trust` 与 `updatedAt`，结论与证据永不重写。
 
 ### 漂移门禁
 

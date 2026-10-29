@@ -112,7 +112,7 @@ pnpm run distill-facts -- --turns turns.jsonl --out candidates --skip-rejected c
 pnpm exec tsx scripts/draft-conflicts.ts --facts candidates --out conflict-report.md
 ```
 
-In that sequence distillation proposes, a reviewer confirms or rejects, later distillation skips what was rejected, and conflict drafting stays a proposal. `rejected/` is a reserved directory name: the loader skips it, so a rejected claim cannot re-enter the corpus even if its document is left in the tree. Confirmation only changes `trust` and `updatedAt`; the claim and its evidence are never rewritten.
+In that sequence distillation proposes, a reviewer confirms or rejects, later distillation skips what was rejected, and conflict drafting stays a proposal. Distillation drops a proposal that restates an accepted one within the same reply, and a proposal that restates a rejected claim. Both checks compare vocabulary, so a short pointer to a longer claim ("the rule above is in the checklist") is not merged; the promotion gate then rejects it as coverage-redundant, which keeps the corpus clean at the cost of one extra candidate reaching review. `rejected/` is a reserved directory name: the loader skips it, so a rejected claim cannot re-enter the corpus even if its document is left in the tree. Confirmation only changes `trust` and `updatedAt`; the claim and its evidence are never rewritten.
 
 ### Drift gate
 

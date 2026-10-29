@@ -84,16 +84,16 @@ export async function distillCandidates(
   const rejectedConclusions = options.skipConclusions ?? []
   const rejectedExamples = rejectedConclusions.slice(0, options.maxRejectedExamples ?? 8)
   const skip = rejectedConclusions.map(text => new Set(tokenize(text)))
+  const overlaps = (tokens: ReadonlySet<string>, other: ReadonlySet<string>): boolean => {
+    let shared = 0
+    for (const token of tokens) if (other.has(token)) shared += 1
+    const smaller = Math.min(tokens.size, other.size)
+    return smaller > 0 && shared / smaller >= 0.6
+  }
   const nearDuplicate = (conclusion: string): boolean => {
     const tokens = new Set(tokenize(conclusion))
     if (tokens.size === 0) return false
-    for (const rejected of skip) {
-      let shared = 0
-      for (const token of tokens) if (rejected.has(token)) shared += 1
-      const smaller = Math.min(tokens.size, rejected.size)
-      if (smaller > 0 && shared / smaller >= 0.6) return true
-    }
-    return false
+    return skip.some(rejected => overlaps(tokens, rejected))
   }
   const accepted: Fact[] = []
   const rejected: { conclusion: string; reason: string }[] = []
@@ -120,6 +120,7 @@ export async function distillCandidates(
     }
 
     let kept = 0
+    const acceptedThisTurn: Set<string>[] = []
     for (const proposal of proposals) {
       if (kept >= maxPerTurn) break
       const record = proposal as {
@@ -136,6 +137,11 @@ export async function distillCandidates(
       }
       if (nearDuplicate(conclusion)) {
         rejected.push({ conclusion, reason: 'already rejected by a reviewer' })
+        continue
+      }
+      const tokens = new Set(tokenize(conclusion))
+      if (acceptedThisTurn.some(other => overlaps(tokens, other))) {
+        rejected.push({ conclusion, reason: 'duplicates an accepted proposal in the same turn' })
         continue
       }
       // Falsifiability: the quote must exist in the turn, or the claim has no support.
@@ -171,6 +177,7 @@ export async function distillCandidates(
         continue
       }
       accepted.push(parsed)
+      acceptedThisTurn.push(tokens)
       kept += 1
     }
   }
