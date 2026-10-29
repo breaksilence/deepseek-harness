@@ -18,8 +18,14 @@ export interface Baseline {
   readonly facts: number
   readonly promoted: number
   readonly coverage: number
-  readonly questionAccuracy: number
-  readonly paraphraseAccuracy: number
+  /** Question accuracy over the facts the promotion gate admitted: the end-to-end pipeline. */
+  readonly pipelineAccuracy: number
+  /** Question accuracy over every fact: the retrieval ceiling, independent of admission. */
+  readonly retrievalAccuracy: number
+  /** Paraphrased questions over admitted facts. */
+  readonly pipelineParaphrase: number
+  /** Paraphrased questions over every fact. */
+  readonly retrievalParaphrase: number
   /** Allowed downward drift before `--check` fails. */
   readonly tolerance: number
   /** Recorded when the baseline was written. */
@@ -89,12 +95,16 @@ export function measure(options: {
   const promotedIds = new Set(report.candidates.filter(candidate => candidate.decision === 'promote').map(candidate => candidate.id))
   const promoted = facts.filter(fact => promotedIds.has(fact.id))
   const minTopicTokens = options.minTopicTokens ?? 2
+  const questions = loadQuestions(options.questionsPath)
+  const paraphrased = loadQuestions(options.paraphrasedPath)
   return {
     facts: facts.length,
     promoted: promoted.length,
     coverage: Number(report.coverage.toFixed(3)),
-    questionAccuracy: accuracyOf(promoted, loadQuestions(options.questionsPath), minTopicTokens),
-    paraphraseAccuracy: accuracyOf(promoted, loadQuestions(options.paraphrasedPath), minTopicTokens),
+    pipelineAccuracy: accuracyOf(promoted, questions, minTopicTokens),
+    retrievalAccuracy: accuracyOf(facts, questions, minTopicTokens),
+    pipelineParaphrase: accuracyOf(promoted, paraphrased, minTopicTokens),
+    retrievalParaphrase: accuracyOf(facts, paraphrased, minTopicTokens),
   }
 }
 
@@ -106,7 +116,10 @@ export function measure(options: {
  */
 export function compare(baseline: Baseline, current: Measurement): readonly Drift[] {
   const drifts: Drift[] = []
-  const numeric: readonly (keyof Measurement)[] = ['facts', 'promoted', 'coverage', 'questionAccuracy', 'paraphraseAccuracy']
+  const numeric: readonly (keyof Measurement)[] = [
+    'facts', 'promoted', 'coverage',
+    'pipelineAccuracy', 'retrievalAccuracy', 'pipelineParaphrase', 'retrievalParaphrase',
+  ]
   for (const field of numeric) {
     // Counts must not shrink at all; rates may drift down by the recorded tolerance.
     const allowed = field === 'facts' || field === 'promoted' ? 0 : baseline.tolerance

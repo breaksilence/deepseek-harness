@@ -12,8 +12,10 @@ const measurement: Measurement = {
   facts: 33,
   promoted: 22,
   coverage: 0.758,
-  questionAccuracy: 0.909,
-  paraphraseAccuracy: 0.909,
+  pipelineAccuracy: 0.909,
+  retrievalAccuracy: 0.939,
+  pipelineParaphrase: 0.909,
+  retrievalParaphrase: 0.909,
 }
 
 const baseline: Baseline = { ...measurement, tolerance: 0.05, recordedAt: '2026-10-29T13:04:34.041Z' }
@@ -41,7 +43,8 @@ describe('measure', () => {
     })
     expect(strict.facts).toBe(33)
     // A stricter topic rule can only hold or lose recall, never gain it.
-    expect(strict.questionAccuracy).toBeLessThanOrEqual(measurement.questionAccuracy)
+    expect(strict.pipelineAccuracy).toBeLessThanOrEqual(measurement.pipelineAccuracy)
+    expect(strict.retrievalAccuracy).toBeLessThanOrEqual(measurement.retrievalAccuracy)
   })
 })
 
@@ -51,10 +54,13 @@ describe('compare', () => {
   })
 
   it('accepts drift within tolerance and rejects more', () => {
-    expect(compare(baseline, { ...measurement, questionAccuracy: 0.87 })).toEqual([])
-    const drifts = compare(baseline, { ...measurement, questionAccuracy: 0.8 })
+    expect(compare(baseline, { ...measurement, pipelineAccuracy: 0.87 })).toEqual([])
+    const drifts = compare(baseline, { ...measurement, pipelineAccuracy: 0.8 })
     expect(drifts).toHaveLength(1)
-    expect(drifts[0]).toMatchObject({ field: 'questionAccuracy', baseline: 0.909, current: 0.8 })
+    expect(drifts[0]).toMatchObject({ field: 'pipelineAccuracy', baseline: 0.909, current: 0.8 })
+
+    // The retrieval ceiling is tracked separately, so a pipeline-only loss is visible as one drift.
+    expect(compare(baseline, { ...measurement, retrievalAccuracy: 0.8 })[0]).toMatchObject({ field: 'retrievalAccuracy' })
   })
 
   it('rejects any shrink in the fact or promoted counts', () => {

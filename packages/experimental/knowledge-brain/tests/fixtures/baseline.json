@@ -2,8 +2,10 @@
   "facts": 33,
   "promoted": 22,
   "coverage": 0.758,
-  "questionAccuracy": 0.909,
-  "paraphraseAccuracy": 0.909,
+  "pipelineAccuracy": 0.909,
+  "retrievalAccuracy": 0.939,
+  "pipelineParaphrase": 0.909,
+  "retrievalParaphrase": 0.909,
   "tolerance": 0.05,
-  "recordedAt": "2026-10-29T13:04:34.041Z"
+  "recordedAt": "2026-10-29T13:18:06.806Z"
 }
