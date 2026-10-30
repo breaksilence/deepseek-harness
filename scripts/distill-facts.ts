@@ -19,8 +19,17 @@ export interface DistillTurn {
   readonly text: string
 }
 
+/** Token counts a provider reports for one call. */
+export interface CallUsage {
+  readonly promptTokens: number
+  readonly completionTokens: number
+}
+
+/** One model reply, optionally carrying its token counts. */
+export type CandidateReply = string | { readonly text: string; readonly usage?: CallUsage }
+
 /** Asks a model for a JSON array of candidate facts; injected so tests never reach the network. */
-export type CandidateAsker = (prompt: string) => Promise<string>
+export type CandidateAsker = (prompt: string) => Promise<CandidateReply>
 
 /** Options for {@link distillCandidates}. */
 export interface DistillOptions {
@@ -45,6 +54,10 @@ export interface DistillStats {
   readonly dropRate: number
   /** Rejection reasons, count per reason. */
   readonly byReason: Readonly<Record<string, number>>
+  /** Prompt tokens the run spent, or null when the provider reports no usage. */
+  readonly promptTokens: number | null
+  /** Completion tokens the run spent, or null when the provider reports no usage. */
+  readonly completionTokens: number | null
 }
 
 /** One distillation result, including why a proposal was dropped. */
@@ -81,6 +94,15 @@ ${avoided}
 涉及文件：${turn.paths.join(', ') || '(无)'}
 原文：
 ${turn.text}`
+}
+
+/**
+ * Accept a bare string or a reply carrying usage.
+ * @param reply - asker result.
+ * @returns the reply text plus its token counts when reported.
+ */
+function normalize(reply: CandidateReply): { text: string; usage?: CallUsage } {
+  return typeof reply === 'string' ? { text: reply } : reply
 }
 
 /**
@@ -128,13 +150,18 @@ export async function distillCandidates(
   }
   const accepted: Fact[] = []
   const rejected: { conclusion: string; reason: string }[] = []
+  const usage: CallUsage[] = []
   let sequence = 0
 
   for (const turn of turns) {
-    let reply = await ask(buildPrompt(turn, rejectedExamples))
+    const first = normalize(await ask(buildPrompt(turn, rejectedExamples)))
+    if (first.usage !== undefined) usage.push(first.usage)
+    let reply = first.text
     if (!looksLikeArray(reply)) {
       // Real turns often make the model explain itself; one stricter ask recovers most of those.
-      reply = await ask(`${buildPrompt(turn, rejectedExamples)}\n\n只输出 JSON 数组本身，不要任何解释文字。`)
+      const second = normalize(await ask(`${buildPrompt(turn, rejectedExamples)}\n\n只输出 JSON 数组本身，不要任何解释文字。`))
+      if (second.usage !== undefined) usage.push(second.usage)
+      reply = second.text
     }
     const start = reply.indexOf('[')
     const end = reply.lastIndexOf(']')
@@ -217,7 +244,7 @@ export async function distillCandidates(
     }
   }
 
-  return { accepted, rejected, stats: statisticsOf(turns.length, accepted.length, rejected) }
+  return { accepted, rejected, stats: statisticsOf(turns.length, accepted.length, rejected, usage) }
 }
 
 /**
@@ -231,6 +258,7 @@ export function statisticsOf(
   turns: number,
   accepted: number,
   rejected: readonly { readonly reason: string }[],
+  usage?: readonly CallUsage[],
 ): DistillStats {
   const byReason: Record<string, number> = {}
   for (const entry of rejected) byReason[entry.reason] = (byReason[entry.reason] ?? 0) + 1
@@ -242,6 +270,8 @@ export function statisticsOf(
     yieldPerTurn: turns === 0 ? 0 : Number((accepted / turns).toFixed(3)),
     dropRate: proposals === 0 ? 0 : Number((rejected.length / proposals).toFixed(3)),
     byReason,
+    promptTokens: usage === undefined ? null : usage.reduce((sum, entry) => sum + entry.promptTokens, 0),
+    completionTokens: usage === undefined ? null : usage.reduce((sum, entry) => sum + entry.completionTokens, 0),
   }
 }
 
@@ -291,9 +321,16 @@ async function main(): Promise<void> {
       headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
       body: JSON.stringify({ model, max_tokens: Number(flag(argv, '--max-tokens', '3200')), temperature: 0, messages: [{ role: 'user', content: prompt }] }),
     })
-    const body = await response.json() as { choices?: { message?: { content?: string; reasoning_content?: string } }[] }
+    const body = await response.json() as {
+      choices?: { message?: { content?: string; reasoning_content?: string } }[]
+      usage?: { prompt_tokens?: number; completion_tokens?: number }
+    }
     const message = body.choices?.[0]?.message ?? {}
-    return message.content ?? message.reasoning_content ?? ''
+    const text = message.content ?? message.reasoning_content ?? ''
+    // exactOptionalPropertyTypes: omit the field rather than assigning undefined to it.
+    return typeof body.usage?.prompt_tokens === 'number' && typeof body.usage.completion_tokens === 'number'
+      ? { text, usage: { promptTokens: body.usage.prompt_tokens, completionTokens: body.usage.completion_tokens } }
+      : { text }
   }
   const rejectedLog = flag(argv, '--skip-rejected', '')
   const skipConclusions = rejectedLog.length === 0

@@ -118,7 +118,19 @@ describe('statisticsOf', () => {
         'evidence quote not found in the turn': 2,
         'already rejected by a reviewer': 1,
       },
+      // No usage was reported, so costs stay unknown rather than being guessed as zero.
+      promptTokens: null,
+      completionTokens: null,
     })
+  })
+
+  it('sums reported token usage across calls', () => {
+    const stats = statisticsOf(1, 1, [], [
+      { promptTokens: 900, completionTokens: 300 },
+      { promptTokens: 100, completionTokens: 50 },
+    ])
+    expect(stats.promptTokens).toBe(1000)
+    expect(stats.completionTokens).toBe(350)
   })
 
   it('avoids dividing by zero on an empty run', () => {
