@@ -36,4 +36,6 @@ Coverage redundancy is a property of the gate, not of a fact: two facts on one f
 
 Distillation over raw session text is the weak link: a reasoning model spends the output budget before it writes its answer, so a small budget yields unparsable replies. Raising the budget from 1200 to 3200 tokens took the measured yield over eight recorded turns from 0.25 to 1.0 candidates per turn, and the run report now carries the token cost of a pass.
 
+A distillation pass states its own cost rather than leaving it implied. Over eight recorded turns, one candidate per turn cost about 1,190 completion tokens at a per-turn cap of one, 1,615 at the default cap of two, and 1,460 at three, so the cap is a rate-versus-coverage choice a caller makes with numbers in hand instead of a default nobody measured.
+
 The measurement method outranks the numbers. A keyword judge read "do not sum on the client" as summing on the client, and a judge that quoted its evidence could not tell a restated rule from an adopted one. Conclusions that depend on a judge are therefore reported with that judge's accuracy, and value claims rest on mechanical measures or hand labels.

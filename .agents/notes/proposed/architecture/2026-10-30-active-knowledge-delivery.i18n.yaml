@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-10-30-active-knowledge-delivery.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-10-30-active-knowledge-delivery.md
+/agent-note-active-delivery-of-knowledge-at-the-request-tail:
+  en: 48884061f0f96131
+  zh: f014367913807a0b
+/agent-note-active-delivery-of-knowledge-at-the-request-tail/problem:
+  en: 460439dffe7a299d
+  zh: 8e68d0e18a7b678a
+/agent-note-active-delivery-of-knowledge-at-the-request-tail/proposal:
+  en: 0da964ffd0ec8ad9
+  zh: 8c2810f6982532e4
+/agent-note-active-delivery-of-knowledge-at-the-request-tail/evidence-for-the-shape:
+  en: 31a37074a09b6434
+  zh: 8ad0cf110d4c3309
+/agent-note-active-delivery-of-knowledge-at-the-request-tail/alternatives-considered:
+  en: 8f6b9bb2abf7a1e9
+  zh: 10b6025d3ae43f15
+/agent-note-active-delivery-of-knowledge-at-the-request-tail/acceptance-criteria:
+  en: 816ad500422f526c
+  zh: 258d8a25ce9a2d4c
+/agent-note-active-delivery-of-knowledge-at-the-request-tail/risks:
+  en: 130784fdbcc1d204
+  zh: 98d65e35ebaa3014
+/agent-note-active-delivery-of-knowledge-at-the-request-tail/open-questions-before-implementation:
+  en: 82b8d4a5a3f6f556
+  zh: 20d1250db0985aae
