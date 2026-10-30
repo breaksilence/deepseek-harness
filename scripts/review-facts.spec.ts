@@ -141,6 +141,13 @@ describe('statisticsOf', () => {
 describe('buildPrompt', () => {
   const turn = { paths: ['services/billing/handlers/charge.py'], text: '重试必须复用同一个 Idempotency-Key。' }
 
+  it('carries one correct and one wrong evidence example', () => {
+    const prompt = buildPrompt(turn)
+    expect(prompt).toContain('正确：')
+    expect(prompt).toContain('错误：')
+    expect(prompt).toContain('引句被改写了')
+  })
+
   it('names the file and quotes the turn', () => {
     const prompt = buildPrompt(turn)
     expect(prompt).toContain('services/billing/handlers/charge.py')

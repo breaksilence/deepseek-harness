@@ -64,12 +64,19 @@ export function buildPrompt(turn: DistillTurn, rejectedExamples: readonly string
   const avoided = rejectedExamples.length === 0
     ? ''
     : `\n评审人已经拒绝过下面这些结论，不要用同样的意思重复提出：\n${rejectedExamples.map(text => `- ${text}`).join('\n')}\n`
+  const example = `示例：
+原文："重试必须复用同一个 Idempotency-Key，否则客户端重放会造成重复扣款。"
+正确：{"conclusion":"重试必须复用同一个 Idempotency-Key","evidence":"重试必须复用同一个 Idempotency-Key","confidence":0.9}
+错误：{"conclusion":"重试要复用幂等键","evidence":"重试要复用幂等键"}  —— 引句被改写了，会被丢弃。
+`
   return `下面是一次开发会话的片段。请提取"以后还想知道的项目知识"，每条包含：
 - conclusion：不超过 60 字的结论
 - evidence：必须从下面原文里**逐字摘出**的一句话
 - confidence：0 到 1
 
 只输出 JSON 数组，没有可提炼的内容就输出 []。
+
+${example}
 ${avoided}
 涉及文件：${turn.paths.join(', ') || '(无)'}
 原文：
@@ -282,7 +289,7 @@ async function main(): Promise<void> {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, max_tokens: Number(flag(argv, '--max-tokens', '2400')), temperature: 0, messages: [{ role: 'user', content: prompt }] }),
+      body: JSON.stringify({ model, max_tokens: Number(flag(argv, '--max-tokens', '3200')), temperature: 0, messages: [{ role: 'user', content: prompt }] }),
     })
     const body = await response.json() as { choices?: { message?: { content?: string; reasoning_content?: string } }[] }
     const message = body.choices?.[0]?.message ?? {}
