@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-10-30-knowledge-brain-facts-and-gate.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-30-knowledge-brain-facts-and-gate.md
+/agent-note-facts-as-documents-behind-a-promotion-gate:
+  en: 17ae7844d6ba405c
+  zh: 247be03a3feecbdc
+/agent-note-facts-as-documents-behind-a-promotion-gate/problem:
+  en: c9b637aeee9f1372
+  zh: 069a277625989d44
+/agent-note-facts-as-documents-behind-a-promotion-gate/decision:
+  en: d5b56e2b9a9be737
+  zh: 072c96503e5d13fb
+/agent-note-facts-as-documents-behind-a-promotion-gate/alternatives-considered:
+  en: 25e839985e6e9909
+  zh: 19870be094ff094b
+/agent-note-facts-as-documents-behind-a-promotion-gate/consequences:
+  en: f916cc072789ec5a
+  zh: 7075234586dbf4a6
