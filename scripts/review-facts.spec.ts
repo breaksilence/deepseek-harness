@@ -160,6 +160,12 @@ describe('buildPrompt', () => {
     expect(prompt).toContain('引句被改写了')
   })
 
+  it('states the per-turn cap so the model does not overspend', () => {
+    expect(buildPrompt(turn, [], 1)).toContain('最多给出 1 条')
+    expect(buildPrompt(turn, [], 3)).toContain('最多给出 3 条')
+    expect(buildPrompt(turn)).toContain('最多给出 2 条')
+  })
+
   it('names the file and quotes the turn', () => {
     const prompt = buildPrompt(turn)
     expect(prompt).toContain('services/billing/handlers/charge.py')

@@ -128,7 +128,15 @@ pnpm exec tsx scripts/draft-conflicts.ts --facts candidates --out conflict-repor
 
 ### 漂移门禁
 
-用原始会话文本做蒸馏需要足够的输出预算：推理模型会在写出数组之前花掉大半预算，被截断的回复会按"不可解析"丢弃。八段真实轮次实测每轮产出：1200 时 0.25、2400 时 0.63、3200 时 1.0，因此 `--max-tokens` 默认 3200——代价是输出 token，不是输入。报告同时记录所有调用的 `promptTokens` 与 `completionTokens`；提供方不上报用量时为 null，因此一次蒸馏的成本是一个数字而不是假设：八段真实轮次在一次实测中花费 3,463 输入与 16,989 输出 tokens。`distill-facts --report <path>` 写出评审人需要跟上的运行统计：每轮候选数、被丢弃提议的占比、以及丢弃原因。`pnpm run verify-knowledge-baseline -- --distill-report <path>` 会把这两个比率与语料测量一起记录；不提供报告时它们保持 null，因此入库的基线永不依赖模型调用。
+用原始会话文本做蒸馏需要足够的输出预算：推理模型会在写出数组之前花掉大半预算，被截断的回复会按"不可解析"丢弃。八段真实轮次实测每轮产出：1200 时 0.25、2400 时 0.63、3200 时 1.0，因此 `--max-tokens` 默认 3200——代价是输出 token，不是输入。
+
+| `--max-per-turn` | candidates per turn | drop rate | prompt tokens | completion tokens |
+|---|---|---|---|---|
+| 1 | 0.54 | 0.11 | 3,093 | 5,164 |
+| 2 (default) | 0.83 | 0.23 | 3,093 | 10,769 |
+| 3 | 1.25 | 0.12 | 3,244 | 14,604 |
+
+提高上限会让输出 token 近似线性增长，同时产出上升；单条候选成本最低的是上限 1，覆盖最广的是上限 3。该上限由 `--max-per-turn` 设置。报告同时记录所有调用的 `promptTokens` 与 `completionTokens`；提供方不上报用量时为 null，因此一次蒸馏的成本是一个数字而不是假设：八段真实轮次在一次实测中花费 3,463 输入与 16,989 输出 tokens。`distill-facts --report <path>` 写出评审人需要跟上的运行统计：每轮候选数、被丢弃提议的占比、以及丢弃原因。`pnpm run verify-knowledge-baseline -- --distill-report <path>` 会把这两个比率与语料测量一起记录；不提供报告时它们保持 null，因此入库的基线永不依赖模型调用。
 
 `pnpm run verify-knowledge-baseline` 重新测量冻结语料并与 `tests/fixtures/baseline.json` 比对：事实条数与晋升条数一条都不许变少，比率只允许按记录的容差（0.05）向下漂移。回退时它会直接打印"哪个数字从多少掉到多少"，而不是依赖谁记得旧值。
 

@@ -116,7 +116,15 @@ In that sequence distillation proposes, a reviewer confirms or rejects, later di
 
 ### Drift gate
 
-Distillation over raw session text needs output room: a reasoning model spends most of a small budget before it writes the array, and a truncated reply is dropped as unparsable. Eight recorded turns measured yield per turn of 0.25 at 1200 tokens, 0.63 at 2400, and 1.0 at 3200, so `--max-tokens` defaults to 3200 — fidelity costs output tokens, not input. The report also carries `promptTokens` and `completionTokens` across every call, or null when the provider reports no usage, so the cost of a distillation pass is a number instead of an assumption: eight recorded turns cost 3,463 prompt and 16,989 completion tokens in one measured run. `distill-facts --report <path>` writes the run statistics a reviewer has to keep up with: candidates per turn, the share of proposals dropped, and why. `pnpm run verify-knowledge-baseline -- --distill-report <path>` records those two rates alongside the corpus measurements; without a report they stay null, so the committed baseline never depends on a model call.
+Distillation over raw session text needs output room: a reasoning model spends most of a small budget before it writes the array, and a truncated reply is dropped as unparsable. Eight recorded turns measured yield per turn of 0.25 at 1200 tokens, 0.63 at 2400, and 1.0 at 3200, so `--max-tokens` defaults to 3200: fidelity costs output tokens, not input.
+
+| `--max-per-turn` | candidates per turn | drop rate | prompt tokens | completion tokens |
+|---|---|---|---|---|
+| 1 | 0.54 | 0.11 | 3,093 | 5,164 |
+| 2 (default) | 0.83 | 0.23 | 3,093 | 10,769 |
+| 3 | 1.25 | 0.12 | 3,244 | 14,604 |
+
+Raising the cap costs completion tokens roughly linearly while yield rises; the cheapest cost per candidate is the cap of 1, and the widest net is the cap of 3. `--max-per-turn` sets it. The report also carries `promptTokens` and `completionTokens` across every call, or null when the provider reports no usage, so the cost of a distillation pass is a number instead of an assumption: eight recorded turns cost 3,463 prompt and 16,989 completion tokens in one measured run. `distill-facts --report <path>` writes the run statistics a reviewer has to keep up with: candidates per turn, the share of proposals dropped, and why. `pnpm run verify-knowledge-baseline -- --distill-report <path>` records those two rates alongside the corpus measurements; without a report they stay null, so the committed baseline never depends on a model call.
 
 `pnpm run verify-knowledge-baseline` re-measures the frozen corpus and compares against `tests/fixtures/baseline.json`: fact and promoted counts may not shrink at all, and rates may drift down by the recorded tolerance (0.05) only. A regression prints which number fell from what to what instead of relying on someone remembering the old value.
 

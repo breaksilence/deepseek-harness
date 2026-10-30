@@ -73,7 +73,7 @@ export interface DistillOutcome {
  * @param rejectedExamples - conclusions a reviewer already rejected, shown so the model does not restate them.
  * @returns the prompt text.
  */
-export function buildPrompt(turn: DistillTurn, rejectedExamples: readonly string[] = []): string {
+export function buildPrompt(turn: DistillTurn, rejectedExamples: readonly string[] = [], maxPerTurn = 2): string {
   const avoided = rejectedExamples.length === 0
     ? ''
     : `\n评审人已经拒绝过下面这些结论，不要用同样的意思重复提出：\n${rejectedExamples.map(text => `- ${text}`).join('\n')}\n`
@@ -87,7 +87,7 @@ export function buildPrompt(turn: DistillTurn, rejectedExamples: readonly string
 - evidence：必须从下面原文里**逐字摘出**的一句话
 - confidence：0 到 1
 
-只输出 JSON 数组，没有可提炼的内容就输出 []。
+最多给出 ${maxPerTurn} 条，只输出 JSON 数组，没有可提炼的内容就输出 []。
 
 ${example}
 ${avoided}
@@ -154,12 +154,12 @@ export async function distillCandidates(
   let sequence = 0
 
   for (const turn of turns) {
-    const first = normalize(await ask(buildPrompt(turn, rejectedExamples)))
+    const first = normalize(await ask(buildPrompt(turn, rejectedExamples, maxPerTurn)))
     if (first.usage !== undefined) usage.push(first.usage)
     let reply = first.text
     if (!looksLikeArray(reply)) {
       // Real turns often make the model explain itself; one stricter ask recovers most of those.
-      const second = normalize(await ask(`${buildPrompt(turn, rejectedExamples)}\n\n只输出 JSON 数组本身，不要任何解释文字。`))
+      const second = normalize(await ask(`${buildPrompt(turn, rejectedExamples, maxPerTurn)}\n\n只输出 JSON 数组本身，不要任何解释文字。`))
       if (second.usage !== undefined) usage.push(second.usage)
       reply = second.text
     }
@@ -339,7 +339,10 @@ async function main(): Promise<void> {
       .split('\n')
       .filter(line => line.trim().length > 0)
       .map(line => (JSON.parse(line) as { conclusion?: string }).conclusion ?? '')
-  const outcome = await distillCandidates(turns, ask, { skipConclusions })
+  const outcome = await distillCandidates(turns, ask, {
+    skipConclusions,
+    maxPerTurn: Number(flag(argv, '--max-per-turn', '2')),
+  })
   const written = writeCandidates(outcome.accepted, outDir)
   const reportPath = flag(argv, '--report', '')
   if (reportPath.length > 0) writeFileSync(reportPath, `${JSON.stringify(outcome.stats, null, 2)}\n`, 'utf8')
